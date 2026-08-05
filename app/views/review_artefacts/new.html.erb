@@ -1,0 +1,56 @@
+<%= govuk_breadcrumbs(breadcrumbs: {
+      "Home" => root_path,
+      @incident.title => incident_path(@incident),
+      "Mark resolved" => nil
+    }) %>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <span class="govuk-caption-l">Incident #<%= @incident.id %></span>
+    <h1 class="govuk-heading-l">Mark resolved and draft the post-incident review</h1>
+
+    <p class="govuk-body">
+      Fill in what we know and Claude will draft the review in the shape of
+      the DfE incident report template. You can edit it after in the Word
+      export.
+    </p>
+
+    <%= form_with model: @review,
+                  url: incident_review_artefact_path(@incident),
+                  local: true,
+                  builder: GOVUKDesignSystemFormBuilder::FormBuilder do |f| %>
+      <%= f.govuk_error_summary %>
+
+      <%= f.govuk_date_field :end_datetime,
+            legend: { text: "End date & time", size: "m" },
+            hint: { text: "Defaults to now." } %>
+
+      <%= f.govuk_text_field :technical_lead,
+            label: { text: "Technical lead", size: "s" },
+            hint: { text: "Who owned the technical response?" } %>
+
+      <%= f.govuk_text_field :comms_lead,
+            label: { text: "Comms lead", size: "s" },
+            hint: { text: "Who owned updates and user comms?" } %>
+
+      <%= f.govuk_text_field :support_lead,
+            label: { text: "Support lead", size: "s" },
+            hint: { text: "Who owned the support-desk / user tickets?" } %>
+
+      <%= f.govuk_text_area :timeline_notes,
+            label: { text: "Timeline", size: "m" },
+            hint: { text: "What happened, in order. One event per line — include times if you have them (e.g. 09:14, 09:20). Claude will structure this." },
+            rows: 8 %>
+
+      <%= f.govuk_text_area :resolution_notes,
+            label: { text: "How did we resolve it?", size: "m" },
+            hint: { text: "What ultimately fixed the incident, and what confirmed the fix?" },
+            rows: 6 %>
+
+      <%= f.govuk_submit "Mark resolved and generate review" %>
+      <%= link_to "Cancel", @incident, class: "govuk-link govuk-!-margin-left-3" %>
+    <% end %>
+
+  </div>
+</div>
