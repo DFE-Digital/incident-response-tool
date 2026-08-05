@@ -71,6 +71,13 @@
         <% end %>
       </ol>
 
+      <p class="govuk-body govuk-!-margin-top-6">
+        <%= link_to "Download as Word document",
+                    download_incident_process_artefact_path(@incident),
+                    class: "govuk-button govuk-button--secondary",
+                    data: { module: "govuk-button" } %>
+      </p>
+
     <% else %>
       <h2 class="govuk-heading-m">Artefacts</h2>
       <p class="govuk-body govuk-hint">No artefacts generated yet.</p>
