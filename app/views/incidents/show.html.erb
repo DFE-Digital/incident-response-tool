@@ -56,6 +56,12 @@
         <% end %>
 
       <% else %>
+        <details class="govuk-details" data-module="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">Show process</span>
+          </summary>
+          <div class="govuk-details__text">
+
         <p class="govuk-body">
           <strong>Severity:</strong>
           <%= govuk_tag(text: process_artefact.severity_guess,
@@ -90,6 +96,9 @@
                       class: "govuk-button govuk-button--secondary",
                       data: { module: "govuk-button" } %>
         </p>
+
+          </div>
+        </details>
       <% end %>
     </section>
 
@@ -118,6 +127,12 @@
         <% end %>
 
       <% elsif runbook.refused? %>
+        <details class="govuk-details" data-module="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">Show runbook</span>
+          </summary>
+          <div class="govuk-details__text">
+
         <p class="govuk-body">
           <strong>No runbook covers this incident.</strong>
         </p>
@@ -133,7 +148,16 @@
                       data: { module: "govuk-button" } %>
         </p>
 
+          </div>
+        </details>
+
       <% else %>
+        <details class="govuk-details" data-module="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">Show runbook</span>
+          </summary>
+          <div class="govuk-details__text">
+
         <dl class="govuk-summary-list">
           <div class="govuk-summary-list__row">
             <dt class="govuk-summary-list__key">Source</dt>
@@ -186,6 +210,9 @@
                       class: "govuk-button govuk-button--secondary",
                       data: { module: "govuk-button" } %>
         </p>
+
+          </div>
+        </details>
       <% end %>
     </section>
 
