@@ -56,6 +56,12 @@
         <% end %>
 
       <% else %>
+        <details class="govuk-details" data-module="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">Show process</span>
+          </summary>
+          <div class="govuk-details__text">
+
         <p class="govuk-body">
           <strong>Severity:</strong>
           <%= govuk_tag(text: process_artefact.severity_guess,
@@ -90,6 +96,9 @@
                       class: "govuk-button govuk-button--secondary",
                       data: { module: "govuk-button" } %>
         </p>
+
+          </div>
+        </details>
       <% end %>
     </section>
 
@@ -118,6 +127,12 @@
         <% end %>
 
       <% elsif runbook.refused? %>
+        <details class="govuk-details" data-module="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">Show runbook</span>
+          </summary>
+          <div class="govuk-details__text">
+
         <p class="govuk-body">
           <strong>No runbook covers this incident.</strong>
         </p>
@@ -133,7 +148,16 @@
                       data: { module: "govuk-button" } %>
         </p>
 
+          </div>
+        </details>
+
       <% else %>
+        <details class="govuk-details" data-module="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">Show runbook</span>
+          </summary>
+          <div class="govuk-details__text">
+
         <dl class="govuk-summary-list">
           <div class="govuk-summary-list__row">
             <dt class="govuk-summary-list__key">Source</dt>
@@ -186,6 +210,124 @@
                       class: "govuk-button govuk-button--secondary",
                       data: { module: "govuk-button" } %>
         </p>
+
+          </div>
+        </details>
+      <% end %>
+    </section>
+
+    <%# ============================================================ %>
+    <%# Category: Post-incident review                               %>
+    <%# ============================================================ %>
+    <section class="govuk-!-margin-bottom-8">
+      <h3 class="govuk-heading-m">Post-incident review</h3>
+
+      <% review = @incident.review_artefact %>
+      <% if review.nil? && @incident.status == "open" %>
+        <p class="govuk-body govuk-hint">
+          Available once the incident is resolved. Marking it resolved
+          will open a short form and draft the review.
+        </p>
+        <%= link_to "Mark resolved",
+                    new_incident_review_artefact_path(@incident),
+                    class: "govuk-button" %>
+
+      <% elsif review.nil? %>
+        <p class="govuk-body govuk-hint">Not drafted yet.</p>
+        <%= link_to "Draft review",
+                    new_incident_review_artefact_path(@incident),
+                    class: "govuk-button" %>
+
+      <% else %>
+        <details class="govuk-details" data-module="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">Show review</span>
+          </summary>
+          <div class="govuk-details__text">
+
+        <blockquote class="govuk-inset-text">
+          <em>Regardless of what we discover, we understand and truly
+          believe that everyone did the best job they could, given what
+          they knew at the time, their skills and abilities, the
+          resources available, and the situation at hand.</em>
+        </blockquote>
+
+        <dl class="govuk-summary-list">
+          <div class="govuk-summary-list__row">
+            <dt class="govuk-summary-list__key">User impact</dt>
+            <dd class="govuk-summary-list__value"><%= review.user_impact %></dd>
+          </div>
+          <div class="govuk-summary-list__row">
+            <dt class="govuk-summary-list__key">End date &amp; time</dt>
+            <dd class="govuk-summary-list__value"><%= review.end_datetime.strftime("%-d %B %Y at %H:%M") %></dd>
+          </div>
+          <% [["Technical lead", review.technical_lead],
+              ["Comms lead",     review.comms_lead],
+              ["Support lead",   review.support_lead]].each do |label, value| %>
+            <% if value.present? %>
+              <div class="govuk-summary-list__row">
+                <dt class="govuk-summary-list__key"><%= label %></dt>
+                <dd class="govuk-summary-list__value"><%= value %></dd>
+              </div>
+            <% end %>
+          <% end %>
+        </dl>
+
+        <h4 class="govuk-heading-s">Timeline</h4>
+        <% if review.timeline.any? %>
+          <table class="govuk-table">
+            <thead class="govuk-table__head">
+              <tr class="govuk-table__row">
+                <th scope="col" class="govuk-table__header">Time</th>
+                <th scope="col" class="govuk-table__header">Event</th>
+              </tr>
+            </thead>
+            <tbody class="govuk-table__body">
+              <% review.timeline.each do |row| %>
+                <tr class="govuk-table__row">
+                  <td class="govuk-table__cell"><%= row["time"] %></td>
+                  <td class="govuk-table__cell"><%= row["event"] %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <p class="govuk-body govuk-hint">No timeline recorded.</p>
+        <% end %>
+
+        <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
+
+        <p class="govuk-body-s govuk-hint">
+          <strong>For the retrospective meeting.</strong> The sections
+          below are intentionally blank — the team fills them in
+          together during the retro. The downloaded Word document
+          matches this shape.
+        </p>
+
+        <% retro_questions = [
+             "Root cause",
+             "Were we alerted quickly?",
+             "Were we able to diagnose and fix the immediate issue quickly?",
+             "How did we solve the problem?",
+             "Was the process followed well, were comms effective?",
+             "What could we do to prevent this from happening again?",
+             "What could we do to improve our response?",
+             "What could we do to improve comms/process?"
+           ] %>
+        <% retro_questions.each do |q| %>
+          <h4 class="govuk-heading-s govuk-!-margin-top-4"><%= q %></h4>
+          <p class="govuk-body govuk-hint">&mdash;</p>
+        <% end %>
+
+        <p class="govuk-body govuk-!-margin-top-6">
+          <%= link_to "Download as Word document",
+                      download_incident_review_artefact_path(@incident),
+                      class: "govuk-button govuk-button--secondary",
+                      data: { module: "govuk-button" } %>
+        </p>
+
+          </div>
+        </details>
       <% end %>
     </section>
 
