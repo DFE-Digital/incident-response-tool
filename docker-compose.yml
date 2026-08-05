@@ -13,7 +13,8 @@ services:
       - POSTGRES_PASSWORD=developmentpassword
 
   web:
-    image: dfedigital/govuk-rails-boilerplate:${BRANCH_TAG:-latest}
+    build: .
+    image: incident-response-tool:local
     command: ash -c "bundle exec rails db:setup db:migrate && bundle exec rails server -b '0.0.0.0'"
     ports:
       - 3000:3000
