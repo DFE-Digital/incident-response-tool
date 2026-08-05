@@ -1,6 +1,15 @@
 .git
 .github
 
+# project docs — not needed in the image
+docs
+plan.md
+team-idea-blended.md
+docker-compose.dev.yml
+
+# test suite
+spec
+
 *.log
 log
 
