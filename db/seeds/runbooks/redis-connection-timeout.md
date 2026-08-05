@@ -19,7 +19,7 @@ runbook identifies the blocking client and restarts the pool.
 ## Pre-requisites
 
 - Access to the `@ghbfs-tech` GitHub team
-- Cloud Foundry CLI logged in to production
+- `kubectl` configured against the `ghbfs-production` AKS namespace
 - Redis CLI access via jump host (see `@ghbfs-tech` runbook wiki)
 
 ## Steps
@@ -61,7 +61,7 @@ Once the blocking client is killed, restart the Sidekiq worker to
 force it to re-establish clean connections:
 
 ```
-cf restart ghbfs-worker
+kubectl rollout restart -n ghbfs-production deployment/ghbfs-worker
 ```
 
 ## Verification

@@ -19,7 +19,7 @@ detection is wrong for the school's locale, cells split incorrectly.
 ## Pre-requisites
 
 - Access to the `@ghbfs-tech` GitHub team
-- Cloud Foundry CLI logged in to production
+- `kubectl` configured against the `ghbfs-production` AKS namespace
 - A copy of the corrupted CSV the school received (for diagnosis)
 
 ## Steps
@@ -38,7 +38,7 @@ If the first three bytes are not `ef bb bf`, the BOM is missing.
 ### 2. Confirm the CsvExporter config
 
 ```
-cf run-task ghbfs-web "rails runner 'puts CsvExporter.config.inspect'"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails runner 'puts CsvExporter.config.inspect'
 ```
 
 Expected output: `encoding: UTF-8, bom: true, delimiter: ','`.
@@ -48,13 +48,13 @@ Expected output: `encoding: UTF-8, bom: true, delimiter: ','`.
 If configuration has drifted:
 
 ```
-cf run-task ghbfs-web "rails csv:reset_defaults"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails csv:reset_defaults
 ```
 
 ### 4. Regenerate the export
 
 ```
-cf run-task ghbfs-web "rails exports:regenerate[<export_id>]"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails exports:regenerate[<export_id>]
 ```
 
 The `export_id` is visible in the URL when the school hits the

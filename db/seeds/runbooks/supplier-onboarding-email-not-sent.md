@@ -42,7 +42,7 @@ Sign in to `https://www.notifications.service.gov.uk/`, select the
 ### 3. Confirm our template is active
 
 ```
-cf run-task ghbfs-web "rails notify:template_status[supplier_onboarding]"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails notify:template_status[supplier_onboarding]
 ```
 
 Output should show `active: true`.
@@ -50,7 +50,7 @@ Output should show `active: true`.
 ### 4. Resend the onboarding email
 
 ```
-cf run-task ghbfs-web "rails suppliers:resend_onboarding[<reference>]"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails suppliers:resend_onboarding[<reference>]
 ```
 
 Replace `<reference>` with the supplier's registration reference.

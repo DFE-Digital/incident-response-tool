@@ -37,7 +37,7 @@ Confirm the request is from a real school administrator by:
 ### 2. Confirm the account exists and is not suspended
 
 ```
-cf run-task ghbfs-web "rails users:show[<email>]"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails users:show[<email>]
 ```
 
 Note the user's DfE Sign-in identifier for the handoff.
@@ -59,7 +59,7 @@ Send an acknowledgement email using the "2fa-reset-in-progress"
 Notify template:
 
 ```
-cf run-task ghbfs-web "rails users:send_2fa_reset_ack[<email>]"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails users:send_2fa_reset_ack[<email>]
 ```
 
 ## Verification

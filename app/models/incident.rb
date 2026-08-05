@@ -4,9 +4,8 @@ class Incident < ApplicationRecord
 
   SERVICES = [
     "Get Help Buying for Schools",
-    "Apply for Teacher Training",
-    "Get an Identity Check",
-    "Register Trainee Teachers",
+    "Child Development Training",
+    "Help for Early Years Providers",
     "Other",
   ].freeze
 

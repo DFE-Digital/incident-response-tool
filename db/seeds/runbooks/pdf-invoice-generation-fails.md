@@ -19,7 +19,7 @@ missing from the container after a deploy.
 ## Pre-requisites
 
 - Access to the `@ghbfs-tech` GitHub team
-- Cloud Foundry CLI logged in to production
+- `kubectl` configured against the `ghbfs-production` AKS namespace
 - The `invoice_id` from the failing download attempt (visible in the URL)
 
 ## Steps
@@ -27,7 +27,7 @@ missing from the container after a deploy.
 ### 1. Retrieve the failing invoice details
 
 ```
-cf run-task ghbfs-web "rails invoices:show[<invoice_id>]"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails invoices:show[<invoice_id>]
 ```
 
 Note any unusually long strings in the output (over 200 chars per
@@ -36,20 +36,20 @@ line item).
 ### 2. Check the PDF worker health
 
 ```
-cf app pdf-worker
-cf logs pdf-worker --recent | grep -i error
+kubectl get pods -n ghbfs-production -l app=pdf-worker
+kubectl logs -n ghbfs-production deploy/pdf-worker --tail=200 | grep -i error
 ```
 
-If the worker is restarting or CPU-thrashing, restage it:
+If the worker is restarting or CPU-thrashing, restart it:
 
 ```
-cf restage pdf-worker
+kubectl rollout restart -n ghbfs-production deployment/pdf-worker
 ```
 
 ### 3. Verify branding assets are present
 
 ```
-cf ssh pdf-worker -c "ls -la /app/vendor/branding/"
+kubectl exec -n ghbfs-production deploy/pdf-worker -- ls -la /app/vendor/branding/
 ```
 
 Expected files: `dfe-crest.png`, `ogl-logo.png`. If either is missing,
@@ -59,7 +59,7 @@ files indicate an incomplete deploy.
 ### 4. Retry the invoice generation
 
 ```
-cf run-task pdf-worker "rails invoices:regenerate[<invoice_id>]"
+kubectl exec -n ghbfs-production deploy/pdf-worker -- bundle exec rails invoices:regenerate[<invoice_id>]
 ```
 
 ## Verification

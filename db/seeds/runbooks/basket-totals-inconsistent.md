@@ -20,7 +20,7 @@ basket totals.
 ## Pre-requisites
 
 - Access to the `@ghbfs-tech` GitHub team
-- Cloud Foundry CLI logged in to production
+- `kubectl` configured against the `ghbfs-production` AKS namespace
 - The affected school's URN (Unique Reference Number)
 
 ## Steps
@@ -30,14 +30,14 @@ basket totals.
 If a single school reported the issue, use their URN:
 
 ```
-cf run-task ghbfs-web "rails baskets:show_totals[<URN>]"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails baskets:show_totals[<URN>]
 ```
 
 If the metric spike suggests wider impact, list all baskets with a
 mismatch:
 
 ```
-cf run-task ghbfs-web "rails baskets:list_mismatched"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails baskets:list_mismatched
 ```
 
 ### 2. Force a recalculation
@@ -45,13 +45,13 @@ cf run-task ghbfs-web "rails baskets:list_mismatched"
 For a single basket:
 
 ```
-cf run-task ghbfs-web "rails baskets:recalculate[<URN>]"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails baskets:recalculate[<URN>]
 ```
 
 For all mismatched baskets:
 
 ```
-cf run-task ghbfs-web "rails baskets:recalculate_all_mismatched"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails baskets:recalculate_all_mismatched
 ```
 
 The batch task chunks work in batches of 50 to avoid overwhelming
@@ -60,7 +60,7 @@ Redis.
 ### 3. Purge the Redis basket totals cache
 
 ```
-cf run-task ghbfs-web "rails cache:clear[basket_totals]"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails cache:clear[basket_totals]
 ```
 
 ## Verification

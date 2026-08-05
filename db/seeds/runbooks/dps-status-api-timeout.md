@@ -20,7 +20,7 @@ clearing the stuck queue.
 ## Pre-requisites
 
 - Access to the `@ghbfs-tech` GitHub team
-- Cloud Foundry CLI installed and logged in to production
+- `kubectl` configured against the `ghbfs-production` AKS namespace
 - Read access to the Grafana `ghbfs-production` folder
 
 ## Steps
@@ -30,7 +30,7 @@ clearing the stuck queue.
 Run:
 
 ```
-cf ssh dps-sync-worker -c "ps aux | grep sync"
+kubectl exec -n ghbfs-production deploy/dps-sync-worker -- ps aux | grep sync
 ```
 
 Verify the sync process has been running > 10 minutes with no
@@ -40,7 +40,7 @@ Grafana → `dps-sync-worker` dashboard.
 ### 2. Kill the current sync process
 
 ```
-cf ssh dps-sync-worker -c "pkill -f sync"
+kubectl exec -n ghbfs-production deploy/dps-sync-worker -- pkill -f sync
 ```
 
 Wait 30 seconds for the process to fully terminate.
@@ -48,13 +48,13 @@ Wait 30 seconds for the process to fully terminate.
 ### 3. Clear the pending queue
 
 ```
-cf run-task dps-sync-worker "rails dps:clear_stuck_jobs"
+kubectl exec -n ghbfs-production deploy/dps-sync-worker -- bundle exec rails dps:clear_stuck_jobs
 ```
 
 ### 4. Restart the sync
 
 ```
-cf restart dps-sync-worker
+kubectl rollout restart -n ghbfs-production deployment/dps-sync-worker
 ```
 
 ## Verification

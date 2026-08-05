@@ -11,16 +11,16 @@ symptoms:
 
 ## General guidance
 
-Every production deploy is tagged with the commit SHA. Cloud Foundry
-keeps the previous three releases, allowing a fast rollback with
-`cf rollback`. This should be the first response to a deploy that
-caused a regression — investigate the root cause after service is
-restored, not during.
+Every production deploy is a new Kubernetes Deployment revision.
+Kubernetes keeps rollout history and allows a fast rollback with
+`kubectl rollout undo`. This should be the first response to a deploy
+that caused a regression — investigate the root cause after service
+is restored, not during.
 
 ## Pre-requisites
 
 - Access to the `@ghbfs-tech` GitHub team
-- Cloud Foundry CLI logged in to production
+- `kubectl` configured against the `ghbfs-production` AKS namespace
 - Awareness that rollback reverts application code only, not database
   migrations
 
@@ -35,7 +35,7 @@ CircleCI / GitHub Actions.
 ### 2. Identify the previous good revision
 
 ```
-cf revisions ghbfs-web
+kubectl rollout history -n ghbfs-production deployment/ghbfs-web
 ```
 
 Note the revision number just before the current one.
@@ -43,11 +43,17 @@ Note the revision number just before the current one.
 ### 3. Roll back
 
 ```
-cf rollback ghbfs-web --revision <previous-revision-number>
+kubectl rollout undo -n ghbfs-production deployment/ghbfs-web --to-revision=<previous-revision-number>
 ```
 
-Confirm at the prompt. CF will re-deploy the previous release. Expect
-30–60 seconds of rolling replacement.
+Kubernetes will do a rolling replacement to the previous ReplicaSet.
+Watch progress:
+
+```
+kubectl rollout status -n ghbfs-production deployment/ghbfs-web
+```
+
+Expect 30–60 seconds for pods to cycle.
 
 ### 4. Verify database compatibility
 

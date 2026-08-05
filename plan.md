@@ -22,6 +22,21 @@ GOV.UK design system components on top of the boilerplate Rails app.
 
 Everything below assumes we're extending this stack, not replacing it.
 
+## Tooling defaults for generated artefacts
+
+DfE is **no longer on CloudFoundry / GOV.UK PaaS** (decommissioned Dec
+2023). Runbook commands, drafted steps, and infra examples should
+default to **Azure Kubernetes Service (AKS)** patterns:
+
+- `kubectl exec -n <ns> deploy/<name> -- <cmd>` (not `cf ssh`)
+- `kubectl logs -n <ns> deploy/<name> --tail=N` (not `cf logs`)
+- `kubectl rollout restart deployment/<name>` (not `cf restart`)
+- `kubectl rollout undo deployment/<name> --to-revision=N` (not `cf rollback`)
+- Rake tasks via `kubectl exec deploy/<name> -- bundle exec rails <task>`
+- Azure CLI (`az`) for cloud-level ops
+
+Applies to both the seed runbook corpus and anything Claude drafts.
+
 ---
 
 ## Step 0 — Foundations (before feature work)

@@ -19,7 +19,7 @@ searching for real frameworks.
 ## Pre-requisites
 
 - Access to the `@ghbfs-tech` GitHub team
-- Cloud Foundry CLI logged in to production
+- `kubectl` configured against the `ghbfs-production` AKS namespace
 - OpenSearch admin credentials (from the shared 1Password vault)
 
 ## Steps
@@ -33,7 +33,7 @@ curl -u "$OS_ADMIN" https://opensearch.ghbfs.internal/frameworks/_count
 Compare against the row count in the database:
 
 ```
-cf run-task ghbfs-web "rails runner 'puts Framework.published.count'"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails runner 'puts Framework.published.count'
 ```
 
 If OpenSearch count is materially lower than the DB count, the index
@@ -42,7 +42,7 @@ is stale.
 ### 2. Kick off a manual reindex
 
 ```
-cf run-task ghbfs-web "rails frameworks:reindex"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails frameworks:reindex
 ```
 
 This runs in the background. Expected duration: 3–8 minutes depending
@@ -53,7 +53,7 @@ on framework volume.
 Tail the worker logs:
 
 ```
-cf logs ghbfs-web --recent | grep -i reindex
+kubectl logs -n ghbfs-production deploy/ghbfs-web --tail=200 -f | grep -i reindex
 ```
 
 ### 4. Purge the search results cache
@@ -61,7 +61,7 @@ cf logs ghbfs-web --recent | grep -i reindex
 Once reindex completes:
 
 ```
-cf run-task ghbfs-web "rails cache:clear[framework_search]"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails cache:clear[framework_search]
 ```
 
 ## Verification

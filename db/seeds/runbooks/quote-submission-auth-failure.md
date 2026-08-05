@@ -19,7 +19,7 @@ with 401 until the cache is refreshed.
 ## Pre-requisites
 
 - Access to the `@ghbfs-tech` GitHub team
-- Cloud Foundry CLI logged in to production
+- `kubectl` configured against the `ghbfs-production` AKS namespace
 - Awareness of the DfE Sign-in key rotation schedule (published on
   the DfE Sign-in status page)
 
@@ -28,7 +28,7 @@ with 401 until the cache is refreshed.
 ### 1. Confirm JWKS cache is stale
 
 ```
-cf run-task ghbfs-web "rails dfe_signin:show_jwks_cache"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails dfe_signin:show_jwks_cache
 ```
 
 Compare the `kid` in our cache against the current JWKS from DfE
@@ -43,13 +43,13 @@ If the `kid` values differ, our cache is stale.
 ### 2. Clear the JWKS cache
 
 ```
-cf run-task ghbfs-web "rails dfe_signin:clear_jwks_cache"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails dfe_signin:clear_jwks_cache
 ```
 
 ### 3. Warm the cache with a fresh fetch
 
 ```
-cf run-task ghbfs-web "rails dfe_signin:refresh_jwks"
+kubectl exec -n ghbfs-production deploy/ghbfs-web -- bundle exec rails dfe_signin:refresh_jwks
 ```
 
 ## Verification
