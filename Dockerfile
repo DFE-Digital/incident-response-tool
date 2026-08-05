@@ -1,5 +1,5 @@
 # Build compilation image
-FROM ruby:2.7.2-alpine as builder
+FROM ruby:2.7.4-alpine as builder
 
 # The application runs from /app
 WORKDIR /app
@@ -16,7 +16,7 @@ RUN apk add --no-cache build-base yarn postgresql-dev
 
 # Install bundler to run bundle exec
 # This should be the same version as the Gemfile.lock
-RUN gem install bundler:2.1.4 --no-document
+RUN gem install bundler:2.2.24 --no-document
 RUN bundle config set without 'development test'
 
 # Install gems defined in Gemfile
@@ -44,7 +44,7 @@ RUN rm -rf node_modules log tmp && \
       find /usr/local/bundle/gems -name "*.html" -delete
 
 # Build runtime image
-FROM ruby:2.7.2-alpine as production
+FROM ruby:2.7.4-alpine as production
 
 # The application runs from /app
 WORKDIR /app
