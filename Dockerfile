@@ -25,7 +25,7 @@ RUN bundle install --jobs=4 --no-binstubs
 
 # Install node packages defined in package.json, including webpack
 COPY package.json yarn.lock /app/
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --ignore-engines
 
 # Copy all files to /app (except what is defined in .dockerignore)
 COPY . /app/
