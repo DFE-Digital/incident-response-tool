@@ -3,6 +3,17 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
+    <% if notice.present? %>
+      <%= govuk_notification_banner(title_text: "Success", success: true) do |banner|
+            banner.with_heading(text: notice)
+          end %>
+    <% end %>
+    <% if alert.present? %>
+      <%= govuk_notification_banner(title_text: "There is a problem") do |banner|
+            banner.with_heading(text: alert)
+          end %>
+    <% end %>
+
     <span class="govuk-caption-l">Incident #<%= @incident.id %></span>
     <h1 class="govuk-heading-l"><%= @incident.title %></h1>
 
@@ -28,10 +39,46 @@
 
     <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
 
-    <h2 class="govuk-heading-m">Artefacts</h2>
-    <p class="govuk-body govuk-hint">No artefacts generated yet.</p>
+    <% artefact = @incident.process_artefact %>
+    <% if artefact %>
+      <h2 class="govuk-heading-m">Incident response process</h2>
 
-    <%= govuk_button_link_to "Generate next steps", "#" %>
+      <p class="govuk-body">
+        <strong>Severity:</strong>
+        <%= govuk_tag(text: artefact.severity_guess,
+                      colour: { "P1" => "red", "P2" => "orange", "P3" => "yellow", "P4" => "blue" }.fetch(artefact.severity_guess, "grey")) %>
+        &nbsp;<span class="govuk-body-s govuk-!-colour-secondary"><%= artefact.severity_reasoning %></span>
+      </p>
+
+      <h3 class="govuk-heading-s">Immediate actions</h3>
+      <ul class="govuk-list govuk-list--bullet">
+        <% artefact.immediate_actions.each do |action| %>
+          <li><%= action %></li>
+        <% end %>
+      </ul>
+
+      <h3 class="govuk-heading-s">Communication actions</h3>
+      <ul class="govuk-list govuk-list--bullet">
+        <% artefact.communication_actions.each do |action| %>
+          <li><%= action %></li>
+        <% end %>
+      </ul>
+
+      <h3 class="govuk-heading-s">Escalation path</h3>
+      <ol class="govuk-list govuk-list--number">
+        <% artefact.escalation_path.each do |role| %>
+          <li><%= role %></li>
+        <% end %>
+      </ol>
+
+    <% else %>
+      <h2 class="govuk-heading-m">Artefacts</h2>
+      <p class="govuk-body govuk-hint">No artefacts generated yet.</p>
+
+      <%= form_with url: incident_process_artefact_path(@incident), method: :post, local: true do %>
+        <%= submit_tag "Generate next steps", class: "govuk-button" %>
+      <% end %>
+    <% end %>
 
   </div>
 </div>

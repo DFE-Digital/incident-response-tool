@@ -26,3 +26,4 @@ services:
       - DATABASE_URL=postgresql://postgres:developmentpassword@db/rails-boilerplate
       - SECRET_KEY_BASE=abcd1234
       - RAILS_SERVE_STATIC_FILES=true
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}

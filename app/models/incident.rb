@@ -1,4 +1,6 @@
 class Incident < ApplicationRecord
+  has_one :process_artefact, dependent: :destroy
+
   SERVICES = [
     "Get Help Buying for Schools",
     "Apply for Teacher Training",

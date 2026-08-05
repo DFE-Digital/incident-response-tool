@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_08_05_120000) do
+ActiveRecord::Schema.define(version: 2026_08_05_140000) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -24,4 +24,17 @@ ActiveRecord::Schema.define(version: 2026_08_05_120000) do
     t.datetime "updated_at", precision: 6, null: false
   end
 
+  create_table "process_artefacts", force: :cascade do |t|
+    t.bigint "incident_id", null: false
+    t.string "severity_guess", null: false
+    t.text "severity_reasoning", null: false
+    t.text "immediate_actions", null: false
+    t.text "communication_actions", null: false
+    t.text "escalation_path", null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["incident_id"], name: "index_process_artefacts_on_incident_id"
+  end
+
+  add_foreign_key "process_artefacts", "incidents"
 end

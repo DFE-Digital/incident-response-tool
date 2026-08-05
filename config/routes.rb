@@ -1,6 +1,8 @@
 Rails.application.routes.draw do
   root to: "incidents#new"
-  resources :incidents, only: %i[new create show]
+  resources :incidents, only: %i[new create show] do
+    resource :process_artefact, only: %i[create]
+  end
 
   get "/pages/:page", to: "pages#show"
 
