@@ -115,9 +115,16 @@
         <div class="govuk-summary-list__row">
           <dt class="govuk-summary-list__key">Source</dt>
           <dd class="govuk-summary-list__value">
-            <code><%= runbook.runbook_id %></code>
-            <% if runbook.cited_section.present? %>
-              &mdash; <%= runbook.cited_section %>
+            <% if runbook.runbook_id.present? %>
+              <code><%= runbook.runbook_id %></code>
+              <% if runbook.cited_section.present? %>
+                &mdash; <%= runbook.cited_section %>
+              <% end %>
+              <% if runbook.drafted? %>
+                <span class="govuk-hint govuk-!-margin-0"><em>(drafted from this close match)</em></span>
+              <% end %>
+            <% else %>
+              <span class="govuk-hint">Drafted from scratch &mdash; no similar runbook in the corpus</span>
             <% end %>
           </dd>
         </div>
@@ -129,7 +136,7 @@
 
       <% if runbook.drafted? && runbook.general_guidance.present? %>
         <div class="govuk-inset-text">
-          <strong>Drafted (no exact match):</strong> <%= runbook.general_guidance %>
+          <%= runbook.general_guidance %>
         </div>
       <% end %>
 

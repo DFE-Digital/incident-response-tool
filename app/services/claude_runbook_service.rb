@@ -16,15 +16,21 @@ class ClaudeRunbookService
        most-relevant section heading, and name the owner to escalate to
        if the runbook doesn't resolve.
 
-    2. **drafted** — the incident is similar to something in the corpus
-       but no runbook is an exact match. Draft a short runbook stub
-       modelled on the closest existing pattern, and name the owner to
-       escalate to. Set runbook_id to the closest existing match.
+    2. **drafted** — no runbook is an exact match. This is your default
+       for any operational or technical incident. Draft a short runbook
+       from what you know about the service and general SRE practice
+       for UK gov digital services. If a corpus runbook is a *close*
+       pattern, cite its runbook_id; otherwise leave runbook_id null.
+       Always name the owner to escalate to and include steps with
+       commands and verification.
 
-    3. **refused** — the incident is outside the scope of the corpus
-       (e.g. HR issue, physical building issue, an entirely different
-       service). Do not draft a runbook. Explain briefly in
-       refusal_reason and name the owner to escalate to.
+    3. **refused** — only when the report is clearly not an operational
+       or technical incident at all: physical building issues (fire
+       alarm, flooding), HR matters, legal or data-protection requests,
+       personal disputes, spam. Do not refuse an operational incident
+       just because the corpus does not cover it — draft one instead.
+       Explain briefly in refusal_reason and name the owner to escalate
+       to (usually `@ghbfs-service`).
 
     Return a single JSON object matching this exact schema — no prose,
     no markdown fences:
