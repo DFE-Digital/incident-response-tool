@@ -6,56 +6,41 @@ class ClaudeReviewService
   MODEL   = "claude-opus-4-7".freeze
 
   INSTRUCTIONS = <<~PROMPT.freeze
-    You are drafting a post-incident review in the exact shape of DfE's
-    incident-report template. The reader is a DfE Digital delivery team
-    who will paste this into their Word doc and edit it in the
-    retrospective meeting.
+    You are pre-drafting the factual header of a DfE post-incident
+    review — specifically the "User impact" line and the "Timeline"
+    table from the DfE Incident Report template.
 
-    Voice: **blameless**. Hold to the retrospective prime directive spirit:
-    "Regardless of what we discover, we understand and truly believe that
-    everyone did the best job they could, given what they knew at the
-    time, their skills and abilities, the resources available, and the
-    situation at hand." Do not blame individuals. Focus on the system,
-    the process, the tools, and the information available at the time.
+    Scope: fill in what you know from the incident record so the team
+    doesn't have to reconstruct it from memory. Everything after the
+    timeline (root cause, the six reflective questions, prevent /
+    improve action lists, runbook diff) is for the humans to discuss
+    and fill in *during* the retrospective meeting. Do NOT try to
+    answer those questions.
+
+    Voice: **blameless**. Hold to the retrospective prime directive
+    spirit: "Regardless of what we discover, we understand and truly
+    believe that everyone did the best job they could, given what
+    they knew at the time, their skills and abilities, the resources
+    available, and the situation at hand." Do not blame individuals.
     Do not use catastrophising language.
 
-    Return one JSON object matching this schema — no prose, no markdown
-    fences:
+    Return one JSON object matching this schema — no prose, no
+    markdown fences:
 
     {
       "user_impact": "<1-2 sentences. Voice: 'Users were unable to X and Y could not Z.'>",
-      "root_cause": "<1-2 sentences>",
       "timeline": [
         { "time": "<HH:MM or T+Nm>", "event": "<one line>" }
-      ],
-      "alerted_quickly": "<1 paragraph — were we alerted quickly?>",
-      "diagnosed_and_fixed_quickly": "<1 paragraph — were we able to diagnose and fix the immediate issue quickly?>",
-      "how_we_solved_it": "<1 paragraph>",
-      "process_and_comms": "<1 paragraph — was the process followed well, were comms effective?>",
-      "prevent_recurrence": ["<action>", ...],
-      "improve_response": ["<action>", ...],
-      "improve_process_comms": ["<action>", ...],
-      "runbook_diff": "<Markdown, see below>"
+      ]
     }
 
     Rules:
-    - Timeline: preserve any times the user provided; otherwise use T+0,
-      T+5m style relative markers. Time-ordered.
-    - Each bulleted array: 2-4 items, action-oriented, concrete.
-    - runbook_diff:
-      - If a runbook was retrieved for this incident, produce a Markdown
-        diff (```diff fenced block with + and - lines) improving it.
-      - If a runbook was drafted for this incident, produce a Markdown
-        block containing a runbook stub in the corpus shape (frontmatter
-        with runbook_id/owner/last_updated + section headings) so the
-        team can commit it.
-      - If no runbook was matched or drafted, return an empty string.
-    - Escalation and role vocabulary should match the DfE playbook
-      (comms lead / tech lead / support lead / delivery manager /
-      service owner).
-    - Do NOT emit any CloudFoundry commands (`cf ssh`, `cf logs`,
-      `cf run-task`, `cf restart` etc.). DfE is on Azure Kubernetes
-      Service. Default to `kubectl` and `az` in any runbook_diff.
+    - Timeline: preserve any times the user provided; otherwise use
+      T+0, T+5m style relative markers. Time-ordered. One line per
+      event, no editorial commentary.
+    - user_impact should describe *what users could not do*, not the
+      technical cause.
+    - Do not include any other fields in the output.
   PROMPT
 
   def initialize(incident, review)
@@ -87,17 +72,8 @@ class ClaudeReviewService
     json = JSON.parse(data.dig("content", 0, "text"))
 
     @review.update!(
-      user_impact:                 json.fetch("user_impact"),
-      root_cause:                  json.fetch("root_cause"),
-      timeline:                    json.fetch("timeline"),
-      alerted_quickly:             json.fetch("alerted_quickly"),
-      diagnosed_and_fixed_quickly: json.fetch("diagnosed_and_fixed_quickly"),
-      how_we_solved_it:            json.fetch("how_we_solved_it"),
-      process_and_comms:           json.fetch("process_and_comms"),
-      prevent_recurrence:          json.fetch("prevent_recurrence"),
-      improve_response:            json.fetch("improve_response"),
-      improve_process_comms:       json.fetch("improve_process_comms"),
-      runbook_diff:                json["runbook_diff"].to_s
+      user_impact: json.fetch("user_impact"),
+      timeline:    json.fetch("timeline")
     )
   end
 

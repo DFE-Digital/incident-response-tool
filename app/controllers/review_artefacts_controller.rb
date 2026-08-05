@@ -113,26 +113,29 @@ class ReviewArtefactsController < ApplicationController
           #{timeline_rows}
         </table>
 
-        <h2>Incident review</h2>
+        <h2>Incident Review</h2>
         <blockquote><em>#{h.call(PRIME_DIRECTIVE)}</em></blockquote>
 
-        <p><strong>Root cause:</strong> #{h.call(review.root_cause)}</p>
+        <p><em>For the retrospective meeting. Fill these in together as
+        a team.</em></p>
 
-        <p><strong>Were we alerted quickly?</strong><br>#{h.call(review.alerted_quickly)}</p>
-        <p><strong>Were we able to diagnose and fix the immediate issue quickly?</strong><br>#{h.call(review.diagnosed_and_fixed_quickly)}</p>
-        <p><strong>How did we solve the problem?</strong><br>#{h.call(review.how_we_solved_it)}</p>
-        <p><strong>Was the process followed well, were comms effective?</strong><br>#{h.call(review.process_and_comms)}</p>
+        <p><strong>Date &amp; time:</strong> </p>
+        <p><strong>Attending:</strong> </p>
+        <p><strong>Root cause:</strong> </p>
 
-        <h3>What could we do to prevent this from happening again?</h3>
-        #{ul.call(review.prevent_recurrence)}
+        <p><strong>Were we alerted quickly?</strong><br></p>
+        <p><strong>Were we able to diagnose and fix the immediate issue quickly?</strong><br></p>
+        <p><strong>How did we solve the problem?</strong><br></p>
+        <p><strong>Was the process followed well, were comms effective?</strong><br></p>
 
-        <h3>What could we do to improve our response?</h3>
-        #{ul.call(review.improve_response)}
+        <p><strong>What could we do to prevent this from happening again?</strong></p>
+        <ul><li> </li><li> </li><li> </li></ul>
 
-        <h3>What could we do to improve comms/process?</h3>
-        #{ul.call(review.improve_process_comms)}
+        <p><strong>What could we do to improve our response?</strong></p>
+        <ul><li> </li><li> </li><li> </li></ul>
 
-        #{review.runbook_diff.present? ? "<h3>Runbook changes</h3><pre>#{h.call(review.runbook_diff)}</pre>" : ""}
+        <p><strong>What could we do to improve comms/process?</strong></p>
+        <ul><li> </li><li> </li><li> </li></ul>
       </body>
       </html>
     HTML
