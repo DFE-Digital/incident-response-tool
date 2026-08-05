@@ -39,124 +39,155 @@
 
     <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
 
-    <% artefact = @incident.process_artefact %>
-    <% if artefact %>
-      <h2 class="govuk-heading-m">Incident response process</h2>
+    <h2 class="govuk-heading-l">Artefacts</h2>
 
-      <p class="govuk-body">
-        <strong>Severity:</strong>
-        <%= govuk_tag(text: artefact.severity_guess,
-                      colour: { "P1" => "red", "P2" => "orange", "P3" => "yellow", "P4" => "blue" }.fetch(artefact.severity_guess, "grey")) %>
-        &nbsp;<span class="govuk-body-s govuk-!-colour-secondary"><%= artefact.severity_reasoning %></span>
-      </p>
+    <%# ============================================================ %>
+    <%# Category: Incident response process                          %>
+    <%# ============================================================ %>
+    <section class="govuk-!-margin-bottom-8">
+      <h3 class="govuk-heading-m">Incident response process</h3>
 
-      <h3 class="govuk-heading-s">Immediate actions</h3>
-      <ul class="govuk-list govuk-list--bullet">
-        <% artefact.immediate_actions.each do |action| %>
-          <li><%= action %></li>
+      <% process_artefact = @incident.process_artefact %>
+      <% if process_artefact.nil? %>
+        <p class="govuk-body govuk-hint">Not generated yet.</p>
+
+        <%= form_with url: incident_process_artefact_path(@incident), method: :post, local: true do %>
+          <%= submit_tag "Generate process", class: "govuk-button" %>
         <% end %>
-      </ul>
 
-      <h3 class="govuk-heading-s">Communication actions</h3>
-      <ul class="govuk-list govuk-list--bullet">
-        <% artefact.communication_actions.each do |action| %>
-          <li><%= action %></li>
-        <% end %>
-      </ul>
+      <% else %>
+        <p class="govuk-body">
+          <strong>Severity:</strong>
+          <%= govuk_tag(text: process_artefact.severity_guess,
+                        colour: { "P1" => "red", "P2" => "orange", "P3" => "yellow", "P4" => "blue" }.fetch(process_artefact.severity_guess, "grey")) %>
+          &nbsp;<span class="govuk-body-s govuk-!-colour-secondary"><%= process_artefact.severity_reasoning %></span>
+        </p>
 
-      <h3 class="govuk-heading-s">Escalation path</h3>
-      <ol class="govuk-list govuk-list--number">
-        <% artefact.escalation_path.each do |role| %>
-          <li><%= role %></li>
-        <% end %>
-      </ol>
+        <h4 class="govuk-heading-s">Immediate actions</h4>
+        <ul class="govuk-list govuk-list--bullet">
+          <% process_artefact.immediate_actions.each do |action| %>
+            <li><%= action %></li>
+          <% end %>
+        </ul>
 
-      <p class="govuk-body govuk-!-margin-top-6">
-        <%= link_to "Download as Word document",
-                    download_incident_process_artefact_path(@incident),
-                    class: "govuk-button govuk-button--secondary",
-                    data: { module: "govuk-button" } %>
-      </p>
+        <h4 class="govuk-heading-s">Communication actions</h4>
+        <ul class="govuk-list govuk-list--bullet">
+          <% process_artefact.communication_actions.each do |action| %>
+            <li><%= action %></li>
+          <% end %>
+        </ul>
 
-    <% else %>
-      <h2 class="govuk-heading-m">Artefacts</h2>
-      <p class="govuk-body govuk-hint">No artefacts generated yet.</p>
+        <h4 class="govuk-heading-s">Escalation path</h4>
+        <ol class="govuk-list govuk-list--number">
+          <% process_artefact.escalation_path.each do |role| %>
+            <li><%= role %></li>
+          <% end %>
+        </ol>
 
-      <%= form_with url: incident_process_artefact_path(@incident), method: :post, local: true do %>
-        <%= submit_tag "Generate next steps", class: "govuk-button" %>
+        <p class="govuk-body govuk-!-margin-top-6">
+          <%= link_to "Download as Word document",
+                      download_incident_process_artefact_path(@incident),
+                      class: "govuk-button govuk-button--secondary",
+                      data: { module: "govuk-button" } %>
+        </p>
       <% end %>
-    <% end %>
+    </section>
 
-    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
-
-    <% runbook = @incident.runbook_artefact %>
-    <% if runbook.nil? %>
-      <h2 class="govuk-heading-m">Runbook</h2>
-      <p class="govuk-body govuk-hint">No runbook lookup yet.</p>
-
-      <%= form_with url: incident_runbook_artefact_path(@incident), method: :post, local: true do %>
-        <%= submit_tag "Find runbook", class: "govuk-button govuk-button--secondary" %>
-      <% end %>
-
-    <% elsif runbook.refused? %>
-      <%= govuk_notification_banner(title_text: "No runbook covers this") do |banner|
-            banner.with_heading(text: "Escalate to #{runbook.owner_to_escalate_to}")
-          end %>
-      <p class="govuk-body"><%= runbook.refusal_reason %></p>
-
-    <% else %>
-      <h2 class="govuk-heading-m">
+    <%# ============================================================ %>
+    <%# Category: Runbook                                            %>
+    <%# ============================================================ %>
+    <section class="govuk-!-margin-bottom-8">
+      <h3 class="govuk-heading-m">
         Runbook
-        <%= govuk_tag(text: runbook.match_type.capitalize,
-                      colour: runbook.retrieved? ? "green" : "yellow") %>
-      </h2>
-
-      <dl class="govuk-summary-list">
-        <div class="govuk-summary-list__row">
-          <dt class="govuk-summary-list__key">Source</dt>
-          <dd class="govuk-summary-list__value">
-            <% if runbook.runbook_id.present? %>
-              <code><%= runbook.runbook_id %></code>
-              <% if runbook.cited_section.present? %>
-                &mdash; <%= runbook.cited_section %>
-              <% end %>
-              <% if runbook.drafted? %>
-                <span class="govuk-hint govuk-!-margin-0"><em>(drafted from this close match)</em></span>
-              <% end %>
-            <% else %>
-              <span class="govuk-hint">Drafted from scratch &mdash; no similar runbook in the corpus</span>
-            <% end %>
-          </dd>
-        </div>
-        <div class="govuk-summary-list__row">
-          <dt class="govuk-summary-list__key">Escalate to</dt>
-          <dd class="govuk-summary-list__value"><code><%= runbook.owner_to_escalate_to %></code></dd>
-        </div>
-      </dl>
-
-      <% if runbook.drafted? && runbook.general_guidance.present? %>
-        <div class="govuk-inset-text">
-          <%= runbook.general_guidance %>
-        </div>
-      <% end %>
-
-      <h3 class="govuk-heading-s">Steps</h3>
-      <ol class="govuk-list govuk-list--number">
-        <% runbook.steps.each do |step| %>
-          <li>
-            <strong><%= step["action"] %></strong>
-            <% if step["commands"].present? %>
-              <% Array(step["commands"]).each do |cmd| %>
-                <pre class="govuk-!-margin-top-2 govuk-!-margin-bottom-2" style="background:#f3f2f1; padding:0.5rem; overflow-x:auto;"><code><%= cmd %></code></pre>
-              <% end %>
-            <% end %>
-            <% if step["verification"].present? %>
-              <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-4"><em>Verify:</em> <%= step["verification"] %></p>
-            <% end %>
-          </li>
+        <% if @incident.runbook_artefact.present? %>
+          <%= govuk_tag(text: @incident.runbook_artefact.match_type.capitalize,
+                        colour: case @incident.runbook_artefact.match_type
+                                when "retrieved" then "green"
+                                when "drafted"   then "yellow"
+                                else "red"
+                                end) %>
         <% end %>
-      </ol>
-    <% end %>
+      </h3>
+
+      <% runbook = @incident.runbook_artefact %>
+      <% if runbook.nil? %>
+        <p class="govuk-body govuk-hint">Not looked up yet.</p>
+
+        <%= form_with url: incident_runbook_artefact_path(@incident), method: :post, local: true do %>
+          <%= submit_tag "Find runbook", class: "govuk-button" %>
+        <% end %>
+
+      <% elsif runbook.refused? %>
+        <p class="govuk-body">
+          <strong>No runbook covers this incident.</strong>
+        </p>
+        <p class="govuk-body"><%= runbook.refusal_reason %></p>
+        <p class="govuk-body">
+          <strong>Escalate to:</strong> <code><%= runbook.owner_to_escalate_to %></code>
+        </p>
+
+        <p class="govuk-body govuk-!-margin-top-6">
+          <%= link_to "Download as Word document",
+                      download_incident_runbook_artefact_path(@incident),
+                      class: "govuk-button govuk-button--secondary",
+                      data: { module: "govuk-button" } %>
+        </p>
+
+      <% else %>
+        <dl class="govuk-summary-list">
+          <div class="govuk-summary-list__row">
+            <dt class="govuk-summary-list__key">Source</dt>
+            <dd class="govuk-summary-list__value">
+              <% if runbook.runbook_id.present? %>
+                <code><%= runbook.runbook_id %></code>
+                <% if runbook.cited_section.present? %>
+                  &mdash; <%= runbook.cited_section %>
+                <% end %>
+                <% if runbook.drafted? %>
+                  <span class="govuk-hint govuk-!-margin-0"><em>(drafted from this close match)</em></span>
+                <% end %>
+              <% else %>
+                <span class="govuk-hint">Drafted from scratch &mdash; no similar runbook in the corpus</span>
+              <% end %>
+            </dd>
+          </div>
+          <div class="govuk-summary-list__row">
+            <dt class="govuk-summary-list__key">Escalate to</dt>
+            <dd class="govuk-summary-list__value"><code><%= runbook.owner_to_escalate_to %></code></dd>
+          </div>
+        </dl>
+
+        <% if runbook.drafted? && runbook.general_guidance.present? %>
+          <div class="govuk-inset-text">
+            <%= runbook.general_guidance %>
+          </div>
+        <% end %>
+
+        <h4 class="govuk-heading-s">Steps</h4>
+        <ol class="govuk-list govuk-list--number">
+          <% runbook.steps.each do |step| %>
+            <li>
+              <strong><%= step["action"] %></strong>
+              <% if step["commands"].present? %>
+                <% Array(step["commands"]).each do |cmd| %>
+                  <pre class="govuk-!-margin-top-2 govuk-!-margin-bottom-2" style="background:#f3f2f1; padding:0.5rem; overflow-x:auto;"><code><%= cmd %></code></pre>
+                <% end %>
+              <% end %>
+              <% if step["verification"].present? %>
+                <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-4"><em>Verify:</em> <%= step["verification"] %></p>
+              <% end %>
+            </li>
+          <% end %>
+        </ol>
+
+        <p class="govuk-body govuk-!-margin-top-6">
+          <%= link_to "Download as Word document",
+                      download_incident_runbook_artefact_path(@incident),
+                      class: "govuk-button govuk-button--secondary",
+                      data: { module: "govuk-button" } %>
+        </p>
+      <% end %>
+    </section>
 
   </div>
 </div>
