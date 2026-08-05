@@ -22,6 +22,21 @@ GOV.UK design system components on top of the boilerplate Rails app.
 
 Everything below assumes we're extending this stack, not replacing it.
 
+## Tooling defaults for generated artefacts
+
+DfE is **no longer on CloudFoundry / GOV.UK PaaS** (decommissioned Dec
+2023). Runbook commands, drafted steps, and infra examples should
+default to **Azure Kubernetes Service (AKS)** patterns:
+
+- `kubectl exec -n <ns> deploy/<name> -- <cmd>` (not `cf ssh`)
+- `kubectl logs -n <ns> deploy/<name> --tail=N` (not `cf logs`)
+- `kubectl rollout restart deployment/<name>` (not `cf restart`)
+- `kubectl rollout undo deployment/<name> --to-revision=N` (not `cf rollback`)
+- Rake tasks via `kubectl exec deploy/<name> -- bundle exec rails <task>`
+- Azure CLI (`az`) for cloud-level ops
+
+Applies to both the seed runbook corpus and anything Claude drafts.
+
 ---
 
 ## Step 0 — Foundations (before feature work)
@@ -117,27 +132,61 @@ seeded "no-match" cases.
 
 ## Step 4 — Artefact: post-incident review
 
-**Goal:** once the incident is resolved, produce a review draft the team
-can edit + merge.
+**Goal:** once the incident is resolved, produce a review draft in the
+exact shape of DfE's real incident-report template — so Serena's team
+can paste it straight into their working doc.
 
-- On the incident show page, a "Mark resolved" button opens a form:
-  timeline (freeform), actions taken, resolution note.
-- On submit → Claude call with a review-template schema:
-  - `summary` (1 paragraph)
-  - `timeline` (structured — time / event pairs)
-  - `what_went_well[]`
-  - `what_didnt[]`
-  - `follow_ups[]` (each with owner + suggested deadline)
-  - `runbook_diff` — a Markdown patch against the retrieved runbook, or
-    a new runbook stub if none was matched
-- Rendered as a GOV.UK summary list + a diff view.
-- Persisted as a `ReviewArtefact`.
+Reference: `docs/artefact_examples/Incident report template.docx`.
 
-**Input:** incident + timeline + resolution notes.
-**Output:** a review artefact ready to be exported as Markdown.
+### Input form (on "Mark resolved")
 
-**Review moment:** review reads like something an SRE would ship, not
-like generic LLM boilerplate.
+The "Mark resolved" button opens a form that captures what we don't
+already have on the `Incident` record:
+
+- End date & time (defaults to now)
+- Technical lead, Comms lead, Support lead (three text fields)
+- Timeline events — repeating rows of `time` + `event`
+- Free-text resolution notes
+
+The rest of the header (status, start/detection times,
+application/process, priority) comes from the existing `Incident` +
+`ProcessArtefact` records.
+
+### Claude call — review schema
+
+The schema mirrors the template's "Incident Review" section:
+
+- `user_impact` (1–2 sentences, generated from the incident description
+  in the voice of the template's example: *"Users will be unable to
+  … and … will not be able to …"*)
+- `root_cause` (1–2 sentences)
+- `alerted_quickly` (were we alerted quickly? — 1 paragraph)
+- `diagnosed_and_fixed_quickly` (were we able to diagnose and fix the
+  immediate issue quickly? — 1 paragraph)
+- `how_we_solved_it` (1 paragraph)
+- `process_and_comms` (was the process followed well, were comms
+  effective? — 1 paragraph)
+- `prevent_recurrence[]` (bulleted actions — what could we do to prevent
+  this from happening again?)
+- `improve_response[]` (bulleted actions — what could we do to improve
+  our response?)
+- `improve_process_comms[]` (bulleted actions — what could we do to
+  improve comms/process?)
+- `runbook_diff` — Markdown patch against the retrieved runbook, or a
+  new runbook stub if none was matched
+
+The review artefact is rendered on the show page opening with the
+template's retrospective prime directive quote verbatim, then the
+header table, timeline, and the review sections above as a GOV.UK
+summary list. Persisted as a `ReviewArtefact`.
+
+**Input:** incident + process artefact + leads + timeline + resolution
+notes.
+**Output:** a review artefact laid out in the exact shape of the DfE
+template, ready to be exported as Markdown.
+
+**Review moment:** review reads like something Serena would actually
+paste into the team's incident doc, not like generic LLM boilerplate.
 
 ---
 

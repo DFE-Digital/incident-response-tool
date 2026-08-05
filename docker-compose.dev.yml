@@ -28,3 +28,4 @@ services:
       - SECRET_KEY_BASE=abcd1234
       - RAILS_SERVE_STATIC_FILES=true
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - BUNDLE_WITHOUT=development:test
