@@ -190,7 +190,57 @@ paste into the team's incident doc, not like generic LLM boilerplate.
 
 ---
 
-## Step 5 — Incident dashboard + export
+## Step 5 — Teams integration (thread + auto-populated artefacts)
+
+**Goal:** every incident opens its own conversation in a designated
+Teams channel and is kept up to date automatically as artefacts are
+generated. This is the primary comms surface for the on-call team —
+matches the DfE Teacher Services playbook (see
+`docs/artefact_examples/dfe_incident_playbook_reference.md`) where the
+Teams thread is where the incident actually lives.
+
+Previously S2 in stretch; promoted to a main goal because it's the
+feature that makes the tool actually reduce toil rather than adding
+another tab to check.
+
+- **On incident creation (Step 1 hook):** post an "Incident opened"
+  message to the configured Teams channel with title, affected service,
+  reporter, description, and a link back to the incident show page.
+  Persist the returned message identifier as `Incident#teams_thread_id`.
+- **On process artefact generation (Step 2 hook):** reply into the
+  incident's thread with an adaptive card containing severity,
+  immediate actions, comms actions, and escalation path.
+- **On runbook artefact generation (Step 3 hook):** reply with a card
+  containing the match_type (retrieved / drafted / refused),
+  runbook_id + cited_section (or refusal reason), the steps, and the
+  escalate-to team handle.
+- **On resolution (Step 4 hook):** reply with the review artefact —
+  root cause, timeline summary, and links to the `.docx` downloads.
+- **Config:** Teams incoming-webhook URL per service, held in env vars
+  (`TEAMS_WEBHOOK_GHBFS`, `TEAMS_WEBHOOK_EYCDT`, `TEAMS_WEBHOOK_HEYP`).
+  If no webhook is configured for the incident's service, log a warning
+  and continue — never break the artefact flow because comms failed.
+- **Persistence:** `Incident#teams_thread_id` plus per-artefact posted
+  timestamps so we can retry a failed post without duplicating.
+- **Delivery:** inline in the request/response cycle for the hackathon;
+  move to a background job if it starts slowing artefact-generation UX.
+- **Delivery mechanism note:** Teams "classic" Incoming Webhooks are
+  deprecated (M365 retirement in 2025). Use a Power Automate Workflow
+  with an "HTTP request received" trigger — same shape (POST JSON,
+  get a message in the channel) but supported. Threaded replies via
+  the Workflow's `chatMessage` output.
+
+**Input:** each artefact-generation event.
+**Output:** a Teams thread that mirrors the incident's full state, with
+zero manual copy/paste from the on-caller.
+
+**Review moment:** post an incident end-to-end and watch the Teams
+channel — the on-caller should see all four artefacts appearing in
+the same thread as they're produced.
+
+---
+
+## Step 6 — Incident dashboard + export
 
 **Goal:** the demo landing page.
 
@@ -206,7 +256,7 @@ narration.
 
 ---
 
-## Step 6 — Eval + non-functionals
+## Step 7 — Eval + non-functionals
 
 **Goal:** we can prove the system behaves.
 
@@ -238,23 +288,20 @@ Each is a small, self-contained bolt-on.
 - **Value:** the copilot lives where on-callers already are (Claude
   Desktop), not just in the web UI.
 
-### S2 — Teams integration
-- Outgoing webhook: "Post artefact to Teams channel" button on any
-  artefact.
-- Rich card format with citation + owner.
-- Configured via a per-service webhook URL in the DB.
-
-### S3 — Slack integration
-- Same as Teams: outgoing webhook + rich message.
+### S2 — Slack integration
+- Mirror the Step 5 Teams integration for Slack (outgoing webhook +
+  rich message + threaded replies via `ts` from the initial post).
 - Slash command (`/incident-artefact <id>`) as a further stretch.
+- **Value:** teams that use Slack instead of Teams can adopt the tool
+  without moving to Teams.
 
-### S4 — ISO 42001 alignment doc
+### S3 — ISO 42001 alignment doc
 - A `docs/compliance.md` mapping our controls (data minimisation,
   synthetic-only corpus, refusal-on-uncertainty, audit trail on every
   Claude call) to ISO 42001 clauses.
 - Cheap to write, judged well.
 
-### S5 — Streaming responses
+### S4 — Streaming responses
 - SSE endpoint so the artefacts render token-by-token rather than in a
   single blocking response. Better demo optics.
 
@@ -269,25 +316,29 @@ Each is a small, self-contained bolt-on.
 - **End of day:** you can post an incident and get a process + runbook
   back, both persisted and cited. The spine is green.
 
-### Day 2 — review + eval + demo
-- **AM:** Step 4 (post-incident review) + Step 5 (dashboard + export).
-- **PM:** Step 6 (eval + non-functionals) + one stretch (S1 or S3 are
-  the highest demo value).
+### Day 2 — review + Teams + eval + demo
+- **AM:** Step 4 (post-incident review) + Step 5 (Teams integration).
+- **PM:** Step 6 (dashboard + export) + Step 7 (eval + non-functionals),
+  then one stretch (S1 MCP or S2 Slack) only if Step 7 is green by 15:00.
 - **PM last hour:** demo rehearsal, screenshots, kill any half-built
   stretch that isn't demoable.
+
+Step 5 (Teams) is the demo's headline moment — the on-caller doesn't
+have to touch the web UI to see the full picture. Protect that time.
 
 ---
 
 ## Team roles (three people)
 
-- **A — Rails + UI + persistence.** Owns Steps 0, 1, 5 and the GOV.UK
+- **A — Rails + UI + persistence.** Owns Steps 0, 1, 6 and the GOV.UK
   rendering of every artefact. Owns the demo's visible surface.
 - **B — Claude + prompts + eval.** Owns Steps 2, 3, 4 prompt design,
-  structured output schemas, and Step 6 eval harness. Owns the model
+  structured output schemas, and Step 7 eval harness. Owns the model
   behaviour.
-- **C — Corpus + drafter + integrations.** Owns the synthetic runbook
-  corpus, the drafter tuning, and any stretch integration (Teams/Slack/
-  MCP). Owns the demo's memorable moments.
+- **C — Corpus + Teams + drafter.** Owns the synthetic runbook corpus,
+  Step 5 Teams integration (posting, threading, adaptive cards), the
+  drafter tuning, and any stretch integration (Slack / MCP). Owns the
+  demo's memorable moments.
 
 All three pair on the demo script late on Day 2.
 
@@ -320,7 +371,7 @@ All three pair on the demo script late on Day 2.
    runbook content. Real failure modes, real owner names, real service
    language.
 4. **Stretch creep on Day 2.** Response: stretch work only begins when
-   Step 6 is green. If Step 6 isn't done by 15:00 Day 2, no stretch.
+   Step 7 is green. If Step 7 isn't done by 15:00 Day 2, no stretch.
 5. **Claude API cost during eval iteration.** Response: prompt caching
    on the corpus (~95% cache hit rate expected); per-call cost surfaced
    in the UI so we spot expensive prompts early.
@@ -335,7 +386,7 @@ Before we start Step 0, we agree on:
       fires events) — this plan is chat-driven; confirm.
 - [ ] Three artefacts (process, runbook, review) is the right cut vs
       collapsing to two.
-- [ ] Stretch priorities — of S1–S5, which two go on the "if time" list?
+- [ ] Stretch priorities — of S1–S4, which one goes on the "if time" list?
 - [ ] Team roles A / B / C — who owns which.
 - [ ] Day 1 exit criterion — "post incident, get process + runbook back,
       both persisted and cited."
