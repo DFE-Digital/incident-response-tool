@@ -1,107 +1,84 @@
-⚠️ This repository is archived in favour of [Rails template](https://github.com/DFE-Digital/rails-template)
+# Incident Response Tool
 
-# GOV.UK Rails Boilerplate
+A Claude-powered runbook copilot for UK Government digital services. Submit an incident in plain text and get back a structured response process, a grounded runbook, and — once resolved — a post-incident review draft. Built on GOV.UK Design System Rails.
 
 ## Prerequisites
 
-- Ruby 2.7.1
-- PostgreSQL
-- NodeJS 12.13.x
-- Yarn 1.12.x
+- Docker (or Podman with the `docker` shim — both work)
+- An Anthropic API key (`ANTHROPIC_API_KEY`)
 
-## Setting up the app in development
+No local Ruby, Node, or PostgreSQL installation required.
 
-1. Run `bundle install` to install the gem dependencies
-2. Run `yarn` to install node dependencies
-3. Run `bin/rails db:setup` to set up the database development and test schemas, and seed with test data
-4. Run `bundle exec rails server` to launch the app on http://localhost:3000
-5. Run `./bin/webpack-dev-server` in a separate shell for faster compilation of assets
-
-## Whats included in this boilerplate?
-
-- Rails 6.0 with Webpacker
-- [GOV.UK Frontend](https://github.com/alphagov/govuk-frontend)
-- [GOV.UK Design System Formbuilder](https://github.com/dfe-digital/govuk_design_system_formbuilder/)
-- [GOV.UK Components](https://github.com/dfe-digital/govuk-components)
-- RSpec
-- Dotenv (managing environment variables)
-- Travis with Heroku deployment
-- Docker and docker compose
-
-## Running specs, linter(without auto correct) and annotate models and serializers
-```
-bundle exec rake
-```
-
-## Running specs
-```
-bundle exec rspec
-```
-
-## Linting
-
-It's best to lint just your app directories and not those belonging to the framework, e.g.
+## Quick start (development)
 
 ```bash
-bundle exec rubocop app config db lib spec Gemfile --format clang -a
+# 1. Build the image (first time, or after Gemfile/package.json changes)
+make build
 
-or
+# 2. Export your API key
+export ANTHROPIC_API_KEY=sk-ant-...
 
-bundle exec scss-lint app/webpacker/styles
+# 3. Start the dev environment (live source mount, auto-reload)
+make dev
 ```
 
-## Docker
+The app is available at **http://localhost:3000** (or via your lab proxy at `https://3000-<hostname>/`).
 
-### Why use Docker?
-- Run the application locally without installing dependencies (postgres, system libraries...)
-- Run in a Linux environment similar to production
-- Simulate running in production with dependencies using docker-compose
-- Package the application so it can be versioned and deployed to multiple environments
+On first run, `db:create` and `db:migrate` run automatically before the server starts. Subsequent starts skip the wait and boot in ~5 s.
 
-### Prerequisites
-- Docker >= 19.03.12
+### Stopping
 
-### Build
-```
-make build-local-image
+```bash
+make dev-down
 ```
 
-It relies heavily on caching. The first build may be slow and subsequent ones faster.
+## Makefile targets
 
-### Single docker image
-The docker image doesn't contain a default command. Any command can be appended:
+| Target | Description |
+|---|---|
+| `make build` | Build the Docker image (uses layer cache — fast for code-only changes) |
+| `make rebuild` | Full rebuild without cache (use when Gemfile or package.json change) |
+| `make dev` | Start dev environment with live source mount |
+| `make dev-down` | Stop and remove dev containers |
+| `make up` | Start in production mode (baked image, no source mount) |
+| `make down` | Stop production containers |
+| `make logs` | Tail web container logs |
+
+## Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude calls |
+| `RAILS_ENV` | No | Defaults to `development` in dev compose |
+| `DATABASE_URL` | No | Set automatically by dev compose |
+| `SECRET_KEY_BASE` | No | Set to a placeholder in dev compose |
+
+In development the API key is passed through from your shell:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+make dev
 ```
-% docker run -p 3001:3000 dfedigital/govuk-rails-boilerplate:latest rails -vT
-rails about                              # List versions of all Rails frameworks and the environment
-rails action_mailbox:ingress:exim        # Relay an inbound email from Exim to Action Mailbox (URL and INGRESS_PASSWORD required)
-...
+
+## Architecture
+
+- **Rails 6.1** on Ruby 2.7.4 (Alpine Docker)
+- **GOV.UK Design System** — govuk-frontend 3.12, govuk-components, govuk_design_system_formbuilder
+- **PostgreSQL 11** via Docker service
+- **Claude API** — plain `Net::HTTP` calls (no SDK dependency), structured JSON output
+- Assets precompiled into the image via Webpacker; served as static files in both dev and production modes
+
+## Running database migrations
+
+Migrations run automatically on container start. To run them manually:
+
+```bash
+docker exec incident-response-tool_web_1 bundle exec rails db:migrate
 ```
 
-### Run in production mode
-Docker compose provides a default empty database to run rails in production mode.
+## Stack
 
-```
-docker-compose up
-```
-
-Open: http://localhost:3000
-
-## Deploying on GOV.UK PaaS
-
-### Prerequisites
-
-- Your department, agency or team has a GOV.UK PaaS account
-- You have a personal account granted by your organisation manager
-- You have downloaded and installed the [Cloud Foundry CLI](https://github.com/cloudfoundry/cli#downloads) for your platform
-
-### Deploy
-
-1. Run `cf login -a api.london.cloud.service.gov.uk -u USERNAME`, `USERNAME` is your personal GOV.UK PaaS account email address
-2. Run `bundle package --all` to vendor ruby dependencies
-3. Run `yarn` to vendor node dependencies
-4. Run `bundle exec rails webpacker:compile` to compile assets
-5. Run `cf push` to push the app to Cloud Foundry Application Runtime
-
-Check the file `manifest.yml` for customisation of name (you may need to change it as there could be a conflict on that name), buildpacks and eventual services (PostgreSQL needs to be [set up](https://docs.cloud.service.gov.uk/deploying_services/postgresql/)).
-
-The app should be available at https://govuk-rails-boilerplate.london.cloudapps.digital
+- Ruby 2.7.4
+- Rails 6.1.4
+- PostgreSQL 11
+- Webpacker 5 / govuk-frontend 3.12
