@@ -1,0 +1,37 @@
+<%= govuk_breadcrumbs(breadcrumbs: [{ text: "Home", href: root_path }, { text: @incident.title }]) %>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <span class="govuk-caption-l">Incident #<%= @incident.id %></span>
+    <h1 class="govuk-heading-l"><%= @incident.title %></h1>
+
+    <%= govuk_tag(text: @incident.status.capitalize, colour: @incident.status == "open" ? "red" : "green") %>
+
+    <dl class="govuk-summary-list govuk-!-margin-top-4">
+      <div class="govuk-summary-list__row">
+        <dt class="govuk-summary-list__key">Service</dt>
+        <dd class="govuk-summary-list__value"><%= @incident.service %></dd>
+      </div>
+      <div class="govuk-summary-list__row">
+        <dt class="govuk-summary-list__key">Status</dt>
+        <dd class="govuk-summary-list__value"><%= @incident.status.capitalize %></dd>
+      </div>
+      <div class="govuk-summary-list__row">
+        <dt class="govuk-summary-list__key">Reported</dt>
+        <dd class="govuk-summary-list__value"><%= @incident.created_at.strftime("%-d %B %Y at %H:%M") %></dd>
+      </div>
+    </dl>
+
+    <h2 class="govuk-heading-m">What happened</h2>
+    <%= simple_format(@incident.description, class: "govuk-body") %>
+
+    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+    <h2 class="govuk-heading-m">Artefacts</h2>
+    <p class="govuk-body govuk-hint">No artefacts generated yet.</p>
+
+    <%= govuk_button_link_to "Generate next steps", "#" %>
+
+  </div>
+</div>

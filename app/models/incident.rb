@@ -1,0 +1,20 @@
+class Incident < ApplicationRecord
+  SERVICES = [
+    "Get Help Buying for Schools",
+    "Apply for Teacher Training",
+    "Get an Identity Check",
+    "Register Trainee Teachers",
+    "Other",
+  ].freeze
+
+  STATUSES = %w[open resolved].freeze
+
+  validates :title, presence: true
+  validates :description, presence: true
+  validates :service, presence: true, inclusion: { in: SERVICES }
+  validates :status, inclusion: { in: STATUSES }
+
+  scope :open, -> { where(status: "open") }
+  scope :resolved, -> { where(status: "resolved") }
+  scope :recent, -> { order(created_at: :desc) }
+end
