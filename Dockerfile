@@ -1,5 +1,5 @@
 # Build compilation image
-FROM ruby:2.7.4-alpine as builder
+FROM ruby:3.2-alpine as builder
 
 # The application runs from /app
 WORKDIR /app
@@ -16,7 +16,7 @@ RUN apk add --no-cache build-base yarn postgresql-dev
 
 # Install bundler to run bundle exec
 # This should be the same version as the Gemfile.lock
-RUN gem install bundler:2.2.24 --no-document
+RUN gem install bundler:2.4.22 --no-document
 RUN bundle config set without 'development test'
 
 # Install gems defined in Gemfile
@@ -32,7 +32,7 @@ COPY . /app/
 
 # Compile assets and run webpack
 # Run in rails test environment to avoid loading development gems
-RUN RAILS_ENV=test bundle exec rails assets:precompile
+RUN NODE_OPTIONS=--openssl-legacy-provider RAILS_ENV=test bundle exec rails assets:precompile
 
 # Cleanup to save space in the production image
 RUN rm -rf node_modules log tmp && \
@@ -44,7 +44,7 @@ RUN rm -rf node_modules log tmp && \
       find /usr/local/bundle/gems -name "*.html" -delete
 
 # Build runtime image
-FROM ruby:2.7.4-alpine as production
+FROM ruby:3.2-alpine as production
 
 # The application runs from /app
 WORKDIR /app
