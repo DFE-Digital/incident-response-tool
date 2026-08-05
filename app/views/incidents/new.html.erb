@@ -1,0 +1,27 @@
+<%= govuk_breadcrumbs(breadcrumbs: [{ text: "Home", href: root_path }, { text: "Report an incident" }]) %>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-l">Report an incident</h1>
+
+    <%= form_with model: @incident, local: true, builder: GOVUKDesignSystemFormBuilder::FormBuilder do |f| %>
+      <%= f.govuk_error_summary %>
+
+      <%= f.govuk_text_field :title,
+            label: { text: "Incident title", size: "m" },
+            hint: { text: "A short summary, e.g. 'DPS status API timing out'" } %>
+
+      <%= f.govuk_select :service,
+            Incident::SERVICES.map { |s| [s, s] },
+            options: { include_blank: "Select a service" },
+            label: { text: "Affected service", size: "m" } %>
+
+      <%= f.govuk_text_area :description,
+            label: { text: "What is happening?", size: "m" },
+            hint: { text: "Describe the symptoms, when it started, and who is affected. Paste log output, error messages or alert text." },
+            rows: 8 %>
+
+      <%= f.govuk_submit "Submit incident" %>
+    <% end %>
+  </div>
+</div>

@@ -6,25 +6,24 @@ volumes:
 services:
   db:
     image: postgres:11-alpine
-    # To preserve data between runs of docker-compose, we mount a folder from the host machine.
     volumes:
       - dbdata:/var/lib/postgresql/data
     environment:
       - POSTGRES_PASSWORD=developmentpassword
 
   web:
-    build: .
     image: incident-response-tool:local
-    command: ash -c "bundle exec rails db:create db:migrate && bundle exec rails server -b '0.0.0.0'"
+    volumes:
+      - .:/app
+      - /app/public/packs
+    command: ash -c "sleep 5 && bundle exec rails db:create db:migrate && bundle exec rails server -b 0.0.0.0"
     ports:
       - 3000:3000
     depends_on:
       - db
     environment:
-      - RAILS_ENV=production
-      - DB_HOST=db
-      - DB_DATABASE=rails-boilerplate
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=developmentpassword
+      - RAILS_ENV=development
+      - DATABASE_URL=postgresql://postgres:developmentpassword@db/rails-boilerplate
       - SECRET_KEY_BASE=abcd1234
       - RAILS_SERVE_STATIC_FILES=true
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}

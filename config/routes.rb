@@ -1,4 +1,9 @@
 Rails.application.routes.draw do
+  root to: "incidents#new"
+  resources :incidents, only: %i[new create show] do
+    resource :process_artefact, only: %i[create]
+  end
+
   get "/pages/:page", to: "pages#show"
 
   get "/404", to: "errors#not_found", via: :all
