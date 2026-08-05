@@ -87,5 +87,69 @@
       <% end %>
     <% end %>
 
+    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+    <% runbook = @incident.runbook_artefact %>
+    <% if runbook.nil? %>
+      <h2 class="govuk-heading-m">Runbook</h2>
+      <p class="govuk-body govuk-hint">No runbook lookup yet.</p>
+
+      <%= form_with url: incident_runbook_artefact_path(@incident), method: :post, local: true do %>
+        <%= submit_tag "Find runbook", class: "govuk-button govuk-button--secondary" %>
+      <% end %>
+
+    <% elsif runbook.refused? %>
+      <%= govuk_notification_banner(title_text: "No runbook covers this") do |banner|
+            banner.with_heading(text: "Escalate to #{runbook.owner_to_escalate_to}")
+          end %>
+      <p class="govuk-body"><%= runbook.refusal_reason %></p>
+
+    <% else %>
+      <h2 class="govuk-heading-m">
+        Runbook
+        <%= govuk_tag(text: runbook.match_type.capitalize,
+                      colour: runbook.retrieved? ? "green" : "yellow") %>
+      </h2>
+
+      <dl class="govuk-summary-list">
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Source</dt>
+          <dd class="govuk-summary-list__value">
+            <code><%= runbook.runbook_id %></code>
+            <% if runbook.cited_section.present? %>
+              &mdash; <%= runbook.cited_section %>
+            <% end %>
+          </dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Escalate to</dt>
+          <dd class="govuk-summary-list__value"><code><%= runbook.owner_to_escalate_to %></code></dd>
+        </div>
+      </dl>
+
+      <% if runbook.drafted? && runbook.general_guidance.present? %>
+        <div class="govuk-inset-text">
+          <strong>Drafted (no exact match):</strong> <%= runbook.general_guidance %>
+        </div>
+      <% end %>
+
+      <h3 class="govuk-heading-s">Steps</h3>
+      <ol class="govuk-list govuk-list--number">
+        <% runbook.steps.each do |step| %>
+          <li>
+            <strong><%= step["action"] %></strong>
+            <% if step["commands"].present? %>
+              <% Array(step["commands"]).each do |cmd| %>
+                <pre class="govuk-!-margin-top-2 govuk-!-margin-bottom-2" style="background:#f3f2f1; padding:0.5rem; overflow-x:auto;"><code><%= cmd %></code></pre>
+              <% end %>
+            <% end %>
+            <% if step["verification"].present? %>
+              <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-4"><em>Verify:</em> <%= step["verification"] %></p>
+            <% end %>
+          </li>
+        <% end %>
+      </ol>
+    <% end %>
+
   </div>
 </div>

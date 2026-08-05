@@ -4,6 +4,7 @@ Rails.application.routes.draw do
     resource :process_artefact, only: %i[create] do
       get :download
     end
+    resource :runbook_artefact, only: %i[create]
   end
 
   get "/pages/:page", to: "pages#show"
