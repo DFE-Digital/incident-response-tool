@@ -31,6 +31,9 @@ gem "canonical-rails"
 gem "govuk-components"
 gem "govuk_design_system_formbuilder"
 
+# Convert HTML into valid .docx documents (uses XSLT under the hood)
+gem "htmltoword"
+
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
   gem "byebug", platforms: %i[mri mingw x64_mingw]

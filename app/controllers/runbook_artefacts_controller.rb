@@ -23,16 +23,16 @@ class RunbookArtefactsController < ApplicationController
       return
     end
 
-    send_data build_doc(incident, artefact),
-              filename: "incident-#{incident.id}-runbook.doc",
-              type: "application/msword",
+    send_data Htmltoword::Document.create(build_doc(incident, artefact)),
+              filename: "incident-#{incident.id}-runbook.docx",
+              type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
               disposition: "attachment"
   end
 
   private
 
-  # A .doc file is HTML with a Word MIME type. Word, Google Docs and
-  # LibreOffice all open it cleanly. No gem required.
+  # Uses htmltoword to convert this HTML into a real .docx (OOXML).
+  # Word, Google Docs and LibreOffice all open it as a native document.
   def build_doc(incident, artefact)
     h = ->(s) { ERB::Util.html_escape(s.to_s) }
     description_html = h.call(incident.description).gsub(/\r?\n/, "<br>")
