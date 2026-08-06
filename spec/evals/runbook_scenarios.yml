@@ -1,0 +1,110 @@
+# Eval scenarios for the runbook artefact.
+#
+# Buckets:
+#   retrieval — must match a specific corpus runbook by id.
+#   draft     — plausible operational incident with no corpus match;
+#               expect match_type=drafted, runbook_id nullable (may
+#               cite a close pattern) but must not invent a non-corpus id.
+#   refuse    — clearly non-operational; must refuse.
+#
+# Run with:  bundle exec rake eval:runbook
+---
+- id: dps-timeout
+  bucket: retrieval
+  service: "Get Help Buying for Schools"
+  title: "DPS status page never loads"
+  description: |
+    Users are reporting the DPS status page shows a spinner that never
+    resolves. Direct calls to /api/dps/status are returning 504 Gateway
+    Timeout. Grafana P95 on the endpoint is over 30s.
+  expected_runbook_id: dps-status-api-timeout
+
+- id: framework-search
+  bucket: retrieval
+  service: "Get Help Buying for Schools"
+  title: "Framework search results empty"
+  description: |
+    Schools are searching for frameworks they've used before but getting
+    "No frameworks found". A cursory check of the OpenSearch index shows
+    the document count is much lower than expected.
+  expected_runbook_id: framework-search-empty-results
+
+- id: quote-submission-auth
+  bucket: retrieval
+  service: "Get Help Buying for Schools"
+  title: "Quote submissions failing with 401"
+  description: |
+    Suppliers report they cannot submit quotes — they see "Session
+    expired, please sign in again" and the API returns 401. Sentry shows
+    JWT decode errors from the quote submission flow.
+  expected_runbook_id: quote-submission-auth-failure
+
+- id: basket-mismatch
+  bucket: retrieval
+  service: "Get Help Buying for Schools"
+  title: "Basket total differs from quote totals"
+  description: |
+    A school reports the summary basket price doesn't add up — the sum
+    of individual quote prices in their basket is £2,340 but the total
+    at the bottom says £1,890. Sentry logs show BasketTotalMismatch
+    exceptions.
+  expected_runbook_id: basket-totals-inconsistent
+
+- id: csv-encoding
+  bucket: retrieval
+  service: "Get Help Buying for Schools"
+  title: "Exported CSV shows garbled characters"
+  description: |
+    A school downloaded their supplier list as CSV and opened it in
+    Excel — £ signs are showing as strange characters and cells appear
+    to have split across the wrong columns.
+  expected_runbook_id: csv-export-corrupted
+
+- id: payment-gateway
+  bucket: draft
+  service: "Get Help Buying for Schools"
+  title: "Payment gateway connection failing"
+  description: |
+    Our payment gateway integration is refusing to accept new
+    transactions this morning. Attempts return "Connection refused" at
+    the network layer. This has never happened before and there is no
+    runbook for it that we know of.
+
+- id: analytics-dashboard-zero
+  bucket: draft
+  service: "Help for Early Years Providers"
+  title: "Analytics dashboard showing zero events"
+  description: |
+    The HEYP analytics dashboard has shown zero events since around
+    03:00 last night. GA and our internal pipeline both show no traffic
+    but the site is clearly loading (I just visited it). Something in
+    our event collection pipeline seems broken.
+
+- id: cms-500s
+  bucket: draft
+  service: "Child Development Training"
+  title: "Content management API returning 500s"
+  description: |
+    The Contentful CMS integration on EYCDT is returning 500s for all
+    publish requests. Editors can't push content updates and the
+    scheduled publish jobs are all failing. The Contentful status page
+    is green.
+
+- id: fridge-food-theft
+  bucket: refuse
+  service: "Other"
+  title: "Someone keeps stealing my lunch"
+  description: |
+    Someone in the London office has been taking food out of the shared
+    fridge in the kitchen. This has happened three times this week. Can
+    the tool escalate this to security?
+
+- id: colleague-behaviour
+  bucket: refuse
+  service: "Other"
+  title: "Colleague has been rude in meetings"
+  description: |
+    A colleague on the delivery team has been consistently interrupting
+    people in stand-ups and dismissing suggestions from junior members
+    of the team. I've raised it in a 1-1 but the behaviour hasn't
+    changed. What's the process?

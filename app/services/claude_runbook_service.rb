@@ -89,6 +89,10 @@ class ClaudeRunbookService
   end
 
   def call
+    user_content = PromptSanitizer.sanitize(
+      "Service: #{@incident.service}\nTitle: #{@incident.title}\n\n#{@incident.description}"
+    )
+
     body = {
       model: MODEL,
       max_tokens: 2048,
@@ -100,12 +104,7 @@ class ClaudeRunbookService
           cache_control: { type: "ephemeral" }
         }
       ],
-      messages: [
-        {
-          role: "user",
-          content: "Service: #{@incident.service}\nTitle: #{@incident.title}\n\n#{@incident.description}"
-        }
-      ]
+      messages: [{ role: "user", content: user_content }]
     }
 
     http = Net::HTTP.new(API_URL.host, API_URL.port)
@@ -121,8 +120,9 @@ class ClaudeRunbookService
 
     raise "Claude API error #{response.code}: #{response.body}" unless response.is_a?(Net::HTTPSuccess)
 
-    data = JSON.parse(response.body)
-    json = JSON.parse(data.dig("content", 0, "text"))
+    data  = JSON.parse(response.body)
+    json  = JSON.parse(data.dig("content", 0, "text"))
+    usage = data["usage"] || {}
 
     RunbookArtefact.create!(
       incident: @incident,
@@ -132,7 +132,11 @@ class ClaudeRunbookService
       general_guidance: json["general_guidance"],
       steps: json.fetch("steps"),
       owner_to_escalate_to: json.fetch("owner_to_escalate_to"),
-      refusal_reason: json["refusal_reason"]
+      refusal_reason: json["refusal_reason"],
+      input_tokens:                 usage["input_tokens"],
+      cache_creation_input_tokens:  usage["cache_creation_input_tokens"],
+      cache_read_input_tokens:      usage["cache_read_input_tokens"],
+      output_tokens:                usage["output_tokens"]
     )
   end
 end

@@ -68,6 +68,45 @@ wizard isn't available in your tenant:
 5. Save the flow. The HTTP URL becomes available in the trigger step
    after the first save — copy it into the env var above.
 
+### Troubleshooting: clicking "Workflows" does nothing
+
+Common in DfE tenants — Power Automate can be locked down at admin
+level. Diagnostic sequence:
+
+1. **Try different entry points**. The "Workflows" button moves
+   around in Teams:
+   - Left sidebar → **"..."** (More apps) → search "Workflows"
+   - Channel ⋯ menu → look further down the list for "Workflows"
+   - Direct URL: <https://make.powerautomate.com> in a browser
+2. **If make.powerautomate.com also fails to load** (sign-in loop,
+   "not licensed", or "your tenant admin has blocked"), Power
+   Automate is disabled tenant-wide. Enabling it is a several-day
+   ask to IT, not viable for the sprint.
+3. **Fall back to Option A (webhook.site)** for the demo. The
+   payloads are the interesting part — you can screenshot the JSON
+   or the rendered card preview on webhook.site and it makes the
+   same point.
+4. **Or use Option C (classic Incoming Webhook)** below — deprecated
+   but still working in most tenants as of Aug 2026.
+
+## Option C — classic Incoming Webhook (deprecated fallback)
+
+Only use this if Option B is blocked and you need cards to actually
+land in a Teams channel for the demo. Microsoft has announced retirement
+of Office 365 Connectors but as of Aug 2026 they still work in most
+tenants (extended until end of 2026 at the last public schedule).
+
+1. In the target Teams channel → ⋯ → **Manage channel** →
+   **Connectors** (or the older path: **... → Connectors**).
+2. Find **Incoming Webhook** → **Configure**.
+3. Give it a name + optional icon → **Create**.
+4. Copy the URL. Set it as `TEAMS_WEBHOOK_<SERVICE>` and restart the
+   dev compose.
+
+The classic connector accepts our `type: "message"` +
+`attachments[].content` payload shape — the same code that targets
+Workflows also works here. No app changes needed.
+
 ## What each event looks like
 
 Once the webhook is wired up:

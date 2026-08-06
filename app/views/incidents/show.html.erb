@@ -97,6 +97,10 @@
                       data: { module: "govuk-button" } %>
         </p>
 
+        <% if (line = AnthropicPricing.summary_line(process_artefact)) %>
+          <p class="govuk-body-s govuk-hint">Claude usage: <%= line %></p>
+        <% end %>
+
           </div>
         </details>
       <% end %>
@@ -147,6 +151,10 @@
                       class: "govuk-button govuk-button--secondary",
                       data: { module: "govuk-button" } %>
         </p>
+
+        <% if (line = AnthropicPricing.summary_line(runbook)) %>
+          <p class="govuk-body-s govuk-hint">Claude usage: <%= line %></p>
+        <% end %>
 
           </div>
         </details>
@@ -210,6 +218,10 @@
                       class: "govuk-button govuk-button--secondary",
                       data: { module: "govuk-button" } %>
         </p>
+
+        <% if (line = AnthropicPricing.summary_line(runbook)) %>
+          <p class="govuk-body-s govuk-hint">Claude usage: <%= line %></p>
+        <% end %>
 
           </div>
         </details>
@@ -325,6 +337,10 @@
                       class: "govuk-button govuk-button--secondary",
                       data: { module: "govuk-button" } %>
         </p>
+
+        <% if (line = AnthropicPricing.summary_line(review)) %>
+          <p class="govuk-body-s govuk-hint">Claude usage: <%= line %></p>
+        <% end %>
 
           </div>
         </details>

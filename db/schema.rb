@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_08_06_100000) do
+ActiveRecord::Schema.define(version: 2026_08_06_110000) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -34,6 +34,10 @@ ActiveRecord::Schema.define(version: 2026_08_06_100000) do
     t.text "escalation_path", null: false
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.integer "input_tokens"
+    t.integer "cache_creation_input_tokens"
+    t.integer "cache_read_input_tokens"
+    t.integer "output_tokens"
     t.index ["incident_id"], name: "index_process_artefacts_on_incident_id"
   end
 
@@ -58,6 +62,10 @@ ActiveRecord::Schema.define(version: 2026_08_06_100000) do
     t.text "runbook_diff"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.integer "input_tokens"
+    t.integer "cache_creation_input_tokens"
+    t.integer "cache_read_input_tokens"
+    t.integer "output_tokens"
     t.index ["incident_id"], name: "index_review_artefacts_on_incident_id"
   end
 
@@ -72,6 +80,10 @@ ActiveRecord::Schema.define(version: 2026_08_06_100000) do
     t.text "refusal_reason"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.integer "input_tokens"
+    t.integer "cache_creation_input_tokens"
+    t.integer "cache_read_input_tokens"
+    t.integer "output_tokens"
     t.index ["incident_id"], name: "index_runbook_artefacts_on_incident_id"
   end
 
