@@ -189,54 +189,72 @@ def slide_1(prs):
 
 
 # --------------------------------------------------------------------
-# Slide 2 — Introduction: poor incident management → friction + panic
+# Slide 2 — Introduction: a real CDT / GHBfS incident, minute by minute
 # --------------------------------------------------------------------
 def slide_2(prs):
     s = blank_slide(prs)
-    title_bar(s, prs, "When incident management is thin, friction takes over")
+    title_bar(s, prs, "In our team today: an incident hits CDT and GHBfS")
 
-    # Left column — the operational reality
-    add_text(s, Inches(0.7), Inches(1.4), Inches(6), Inches(0.5),
-             "The pattern we see", size=18, bold=True, color=GOVUK_BLACK)
-    add_bullets(s, Inches(0.7), Inches(2.0), Inches(6), Inches(4.5),
+    add_text(s, Inches(0.7), Inches(1.2), Inches(12), Inches(0.4),
+             "A composite of what actually happens when something breaks "
+             "on one of our services.",
+             size=13, italic=True, color=GOVUK_GREY)
+
+    # Left column — the timeline
+    add_text(s, Inches(0.6), Inches(1.75), Inches(7), Inches(0.5),
+             "The first 20 minutes", size=17, bold=True, color=GOVUK_BLACK)
+
+    def moment(x, y, w, time, event):
+        # Time in blue, event in black — as two aligned mini-columns
+        add_text(s, x, y, Inches(0.75), Inches(0.4),
+                 time, size=12, bold=True, color=GOVUK_BLUE)
+        add_text(s, x + Inches(0.8), y, w - Inches(0.8), Inches(0.7),
+                 event, size=12, color=GOVUK_BLACK)
+
+    tl_x = Inches(0.6)
+    tl_w = Inches(7)
+    y = Inches(2.3)
+    dy = Inches(0.55)
+
+    moment(tl_x, y + 0*dy, tl_w, "09:14",
+           "CDT content API starts returning 503s. GHBfS drop-in cross-service calls "
+           "start failing too.")
+    moment(tl_x, y + 1*dy, tl_w, "09:15",
+           "Someone posts in #cdt-support. Someone else posts in #ghbfs-team. "
+           "A third person DMs Alex directly.")
+    moment(tl_x, y + 2*dy, tl_w, "09:17",
+           "Two people quietly try 'restart the pod'. Nobody says out loud that "
+           "they're doing it.")
+    moment(tl_x, y + 3*dy, tl_w, "09:22",
+           "Delivery manager asks in Teams: \"Is this a P1 or P2? Who's the tech "
+           "lead? Are we telling schools?\"")
+    moment(tl_x, y + 4*dy, tl_w, "09:28",
+           "No answer. Three chats, no timeline, no named leads. Users are "
+           "starting to email.")
+    moment(tl_x, y + 5*dy, tl_w, "10:02",
+           "Someone finally finds the fix. The incident closes. The retro is "
+           "scheduled for \"next week\" — and never happens.")
+
+    # Right column — what's missing
+    add_text(s, Inches(8.0), Inches(1.75), Inches(5), Inches(0.5),
+             "What's missing", size=17, bold=True, color=GOVUK_RED)
+    add_bullets(s, Inches(8.0), Inches(2.3), Inches(5), Inches(4.5),
                 [
-                    "On-call rotates every week; institutional memory does not.",
-                    "\"Where's the runbook for this?\" — 30 minutes of Slack "
-                    "archaeology before anyone starts fixing anything.",
-                    "Severity gets guessed, comms lag, escalation depends on "
-                    "who happens to be online.",
-                    "The retro gets skipped when the fire's out — so the same "
-                    "incident repeats six months later, with a new on-caller.",
-                    "Every incident report gets built from scratch in a "
-                    "different place. None of them get read.",
-                ], size=14, color=GOVUK_BLACK, space_after=6)
+                    "Agreed severity — so comms cadence is guesswork.",
+                    "Named tech / comms / support lead — instead everyone's investigating.",
+                    "One timeline being kept — so the retro has no facts to work from.",
+                    "One shared page — status lives across four chat threads.",
+                    "A defined escalation path — instead it depends on who's online.",
+                    "A runbook to follow — instead of ad-hoc pod restarts.",
+                ], size=13, color=GOVUK_BLACK, space_after=6)
 
-    # Right column — the effect
-    add_text(s, Inches(7.2), Inches(1.4), Inches(5.6), Inches(0.5),
-             "The effect", size=18, bold=True, color=GOVUK_RED)
-
-    def effect(x, y, big, small):
-        add_text(s, x, y, Inches(5.6), Inches(0.7),
-                 big, size=26, bold=True, color=GOVUK_RED)
-        add_text(s, x, y + Inches(0.65), Inches(5.6), Inches(0.5),
-                 small, size=13, color=GOVUK_GREY)
-
-    effect(Inches(7.2), Inches(2.0),
-           "Panic",
-           "Worse decisions under time pressure with no shared shape to lean on.")
-    effect(Inches(7.2), Inches(3.4),
-           "Friction",
-           "Comms tax and copy-paste tax on every single incident.")
-    effect(Inches(7.2), Inches(4.8),
-           "Repeat incidents",
-           "Same problem, six months later, different person, no lesson learned.")
-
-    # Bottom callout
-    add_box(s, Inches(0.7), Inches(6.3), Inches(12), Inches(0.7),
-            "This is a coordination problem — one AI can genuinely help with, "
-            "without replacing the humans doing the fixing.",
-            fill=GOVUK_BLACK, text_color=WHITE,
-            size=15, bold=True, align=PP_ALIGN.CENTER)
+    # Bottom callout — how we help
+    add_box(s, Inches(0.5), Inches(6.5), Inches(12.4), Inches(0.6),
+            "The tool gives the incident a shape from minute one: named leads, "
+            "an agreed severity, a runbook to follow, a timeline being kept, "
+            "and every step landing in one Teams thread.",
+            fill=GOVUK_BLUE, text_color=WHITE,
+            size=13, bold=True, align=PP_ALIGN.CENTER)
 
     add_footer(s, prs, 2, 6)
 
@@ -355,85 +373,9 @@ def slide_4(prs):
 
 
 # --------------------------------------------------------------------
-# Slide 5 — Next steps / improvements
+# Slide 5 — What shipped (moved up so the deck ends on "what's next")
 # --------------------------------------------------------------------
 def slide_5(prs):
-    s = blank_slide(prs)
-    title_bar(s, prs, "What we'd do next")
-
-    top = Inches(1.4)
-    col_w = Inches(6.1)
-    col_h = Inches(5.5)
-
-    # Left column — feature completion & scale
-    left = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                              Inches(0.4), top, col_w, col_h)
-    left.fill.solid(); left.fill.fore_color.rgb = WHITE
-    left.line.color.rgb = GOVUK_BLUE
-    left.line.width = Pt(2.5)
-    band = s.shapes.add_shape(MSO_SHAPE.RECTANGLE,
-                              Inches(0.4), top, col_w, Inches(0.7))
-    band.fill.solid(); band.fill.fore_color.rgb = GOVUK_BLUE
-    band.line.fill.background()
-    add_text(s, Inches(0.6), top + Inches(0.15), col_w - Inches(0.4),
-             Inches(0.4), "Product",
-             size=17, bold=True, color=WHITE)
-    add_bullets(s, Inches(0.6), top + Inches(0.95),
-                col_w - Inches(0.4), col_h - Inches(1.1),
-                [
-                    "Live Teams demo via an M365 Developer Program tenant "
-                    "(DfE Power Automate is admin-blocked).",
-                    "Threaded Teams replies via Graph API — currently each "
-                    "artefact is a fresh message tagged with the incident ID.",
-                    "MCP server — expose the same three tools to Claude "
-                    "Desktop so the copilot lives where on-callers already are.",
-                    "Slack integration mirroring the Teams path for teams "
-                    "who aren't on Teams.",
-                    "Streaming responses — SSE so artefacts render "
-                    "token-by-token during the demo.",
-                    "Human-editable artefacts — right now Claude drafts and "
-                    "you re-run; ideally you can tweak inline.",
-                ], size=12, color=GOVUK_BLACK, space_after=6)
-
-    # Right column — safety & scale-out
-    right = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                               Inches(6.85), top, col_w, col_h)
-    right.fill.solid(); right.fill.fore_color.rgb = WHITE
-    right.line.color.rgb = GOVUK_GREEN
-    right.line.width = Pt(2.5)
-    band2 = s.shapes.add_shape(MSO_SHAPE.RECTANGLE,
-                               Inches(6.85), top, col_w, Inches(0.7))
-    band2.fill.solid(); band2.fill.fore_color.rgb = GOVUK_GREEN
-    band2.line.fill.background()
-    add_text(s, Inches(7.05), top + Inches(0.15), col_w - Inches(0.4),
-             Inches(0.4), "Trust and scale",
-             size=17, bold=True, color=WHITE)
-    add_bullets(s, Inches(7.05), top + Inches(0.95),
-                col_w - Inches(0.4), col_h - Inches(1.1),
-                [
-                    "Grow the eval corpus (spec/evals) beyond 10 scenarios; "
-                    "add an adversarial / prompt-injection bucket.",
-                    "Continuous eval on production inputs — drift detection "
-                    "for prompts + Claude behaviour.",
-                    "Aggregate cost / cache-hit dashboard (per-service, "
-                    "per-day) — schema is already there.",
-                    "Migrate corpus to RAG once it grows past ~200 000 "
-                    "tokens (currently ~5 000, plenty of headroom).",
-                    "Formal impact assessment + standalone AI-usage policy "
-                    "to close the remaining ISO 42001 gaps.",
-                    "Bias testing on outputs — the corpus is uniform in "
-                    "voice; needs diverse-authorship sampling.",
-                    "Background job for Teams posts + Claude calls so the "
-                    "UI never blocks on network I/O.",
-                ], size=12, color=GOVUK_BLACK, space_after=6)
-
-    add_footer(s, prs, 5, 6)
-
-
-# --------------------------------------------------------------------
-# Slide 6 — What shipped (kept from previous version, per user)
-# --------------------------------------------------------------------
-def slide_6(prs):
     s = blank_slide(prs)
     title_bar(s, prs, "What shipped")
 
@@ -467,11 +409,80 @@ def slide_6(prs):
     stat(Inches(7.5), Inches(4.9), "3", "artefacts per incident", GOVUK_GREY)
     stat(Inches(10.3), Inches(4.9), "0", "vector DBs deployed", GOVUK_RED)
 
-    add_box(s, Inches(0.5), Inches(6.4), Inches(12.4), Inches(0.7),
-            "Next: live Teams via M365 dev tenant  ·  larger eval set  ·  "
-            "aggregate cost dashboard  ·  MCP / Slack bolt-ons",
-            fill=GOVUK_LIGHT, text_color=GOVUK_BLACK,
-            size=13, bold=False, align=PP_ALIGN.CENTER)
+    add_footer(s, prs, 5, 6)
+
+
+# --------------------------------------------------------------------
+# Slide 6 — What we'd do next (final slide of the deck)
+# --------------------------------------------------------------------
+def slide_6(prs):
+    s = blank_slide(prs)
+    title_bar(s, prs, "What we'd do next")
+
+    top = Inches(1.4)
+    col_w = Inches(6.1)
+    col_h = Inches(5.5)
+
+    # Left column — feature completion & scale
+    left = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                              Inches(0.4), top, col_w, col_h)
+    left.fill.solid(); left.fill.fore_color.rgb = WHITE
+    left.line.color.rgb = GOVUK_BLUE
+    left.line.width = Pt(2.5)
+    band = s.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                              Inches(0.4), top, col_w, Inches(0.7))
+    band.fill.solid(); band.fill.fore_color.rgb = GOVUK_BLUE
+    band.line.fill.background()
+    add_text(s, Inches(0.6), top + Inches(0.15), col_w - Inches(0.4),
+             Inches(0.4), "Product",
+             size=17, bold=True, color=WHITE)
+    add_bullets(s, Inches(0.6), top + Inches(0.95),
+                col_w - Inches(0.4), col_h - Inches(1.1),
+                [
+                    "Live Teams demo via an M365 Developer Program tenant "
+                    "(DfE Power Automate is admin-blocked).",
+                    "MCP server — expose the same three tools to Claude "
+                    "Desktop so the copilot lives where on-callers already are.",
+                    "More integrations mirroring the Teams path for teams "
+                    "who aren't on Teams (e.g. Slack).",
+                    "Integrate with monitoring tools (e.g. Rollbar, Sentry, "
+                    "Splunk) so incidents can be opened automatically from "
+                    "an alert.",
+                    "Streaming responses — SSE so artefacts render "
+                    "token-by-token during the demo.",
+                    "Human-editable artefacts — right now Claude drafts and "
+                    "you re-run; ideally you can tweak inline.",
+                ], size=12, color=GOVUK_BLACK, space_after=6)
+
+    # Right column — safety & scale-out
+    right = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                               Inches(6.85), top, col_w, col_h)
+    right.fill.solid(); right.fill.fore_color.rgb = WHITE
+    right.line.color.rgb = GOVUK_GREEN
+    right.line.width = Pt(2.5)
+    band2 = s.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                               Inches(6.85), top, col_w, Inches(0.7))
+    band2.fill.solid(); band2.fill.fore_color.rgb = GOVUK_GREEN
+    band2.line.fill.background()
+    add_text(s, Inches(7.05), top + Inches(0.15), col_w - Inches(0.4),
+             Inches(0.4), "Trust and scale",
+             size=17, bold=True, color=WHITE)
+    add_bullets(s, Inches(7.05), top + Inches(0.95),
+                col_w - Inches(0.4), col_h - Inches(1.1),
+                [
+                    "Grow the eval corpus (spec/evals) beyond 10 scenarios; "
+                    "add an adversarial prompt bucket.",
+                    "Continuous eval on production inputs — drift detection "
+                    "for prompts + Claude behaviour.",
+                    "Aggregate cost / cache-hit dashboard (per-service, "
+                    "per-day) — schema is already there.",
+                    "Migrate corpus to RAG once it grows past ~200 000 "
+                    "tokens (currently ~5 000, plenty of headroom).",
+                    "Formal impact assessment + standalone AI-usage policy "
+                    "to close the remaining ISO 42001 gaps.",
+                    "Bias testing on outputs — the corpus is uniform in "
+                    "voice; needs diverse-authorship sampling.",
+                ], size=12, color=GOVUK_BLACK, space_after=6)
 
     add_footer(s, prs, 6, 6)
 
