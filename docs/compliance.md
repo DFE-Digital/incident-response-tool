@@ -41,7 +41,69 @@ with its own prompt and structured JSON output:
 The model is Anthropic Claude Opus 4.7. No fine-tuning; prompts are
 static (versioned in git) with prompt caching for the runbook corpus.
 
-## 3. Data protection posture
+## 3. Architecture — Cache-Augmented Generation (CAG), not RAG
+
+The tool is often mistaken for a retrieval-augmented generation (RAG)
+system because it "answers from a corpus with citations". It isn't.
+It is a **Cache-Augmented Generation (CAG)** system.
+
+### The distinction
+
+- **RAG:** a separate retrieval step (vector similarity, BM25, or a
+  hybrid) narrows a large corpus down to a small relevant subset,
+  which is then inserted into the LLM's context.
+- **CAG:** the whole corpus lives in the LLM's context on every
+  request. Prompt caching (Anthropic's `cache_control:
+  {type: "ephemeral"}`) amortises the input cost across many calls
+  — the first call pays to write the cache; subsequent calls read
+  it at roughly 10× less per token. Retrieval happens implicitly
+  via the LLM's own attention over the full context.
+
+### Why CAG for this system
+
+The runbook corpus (`db/seeds/runbooks/*.md`) is ~5 000 tokens
+across 10 files. That is comfortably inside Claude Opus's context
+window (200k tokens) and small enough that a full-context
+comparison per query is preferable to a similarity-thresholded
+narrow.
+
+### Trade-offs
+
+| | CAG (this tool) | RAG |
+|---|---|---|
+| Infrastructure | Prompt cache only | Vector DB + embedding model + chunker |
+| Retrieval accuracy on small corpora | Very high — the LLM sees the whole corpus every time | Depends on embedding quality and chunk boundaries |
+| Cost per query | Higher without caching; ~1/10 with cache-hit | Cheap per query, but infra + storage costs |
+| Ceiling | ~200 000 input tokens on Claude Opus | Effectively unbounded |
+| Corpus refresh | Invalidates the cache; next call re-writes it | Re-embed the changed docs only |
+| Attack surface for prompt injection | Same as any LLM call | Add: poisoned embeddings, index tampering, retrieval-side prompt injection |
+
+### Implications for this compliance mapping
+
+- **Fewer suppliers to assess (A.10.3).** No embedding-model vendor,
+  no vector-DB vendor. Anthropic is the only AI-adjacent third
+  party.
+- **Simpler data provenance (A.7.4).** The corpus is exactly the
+  set of files committed to git. There is no derived embedding
+  store to keep in sync or protect.
+- **Fewer failure modes (A.6.2.5).** No retrieval-quality
+  failures, no chunking-boundary failures, no similarity-threshold
+  tuning. The evaluation set (`spec/evals/`) exercises the LLM's
+  reasoning directly.
+- **Direct upper bound on corpus size.** CAG will not scale past
+  ~200 000 input tokens. When the corpus grows beyond a few
+  hundred runbooks, migration to RAG becomes forced, not optional
+  — flagged as a known gap.
+- **Live cache-hit rate is measurable.** Each artefact record
+  stores `cache_read_input_tokens` /
+  `cache_creation_input_tokens`. `AnthropicPricing.summary_line`
+  surfaces the hit rate in the UI — a first-order signal that CAG
+  is functioning as designed.
+
+Empirically the hit rate in normal use is ≥95% once the corpus is
+warm (verified by the eval run in `spec/evals/`).
+
+## 4. Data protection posture
 
 - **No production data.** The corpus in `db/seeds/runbooks/*.md` is
   synthetic — hand-written for the sprint using GHBfS-shaped
@@ -60,27 +122,27 @@ static (versioned in git) with prompt caching for the runbook corpus.
 - **No user accounts.** The MVP is single-tenant; no user data is
   stored. Real deployment would sit behind DfE Sign-in.
 
-## 4. Mapping to Annex A controls
+## 5. Mapping to Annex A controls
 
 Controls listed in the order they appear in ISO 42001:2023 Annex A.
 For each, our evidence + any gap. Controls not listed are either not
 applicable to a single-app MVP or covered indirectly by another
 control we do implement.
 
-### 4.1 A.2 — Policies related to AI
+### 5.1 A.2 — Policies related to AI
 
 | Control | Evidence | Gap |
 |---|---|---|
 | A.2.2 AI policy | `team-idea-blended.md` states the "no-vector-DB, prompt-cache, refusal-over-invention" architectural principles the tool is built on. `plan.md` names blameless voice, citation-or-refusal, and data-minimisation as goals. | No standalone written policy. For a real deployment this doc + `plan.md` would be lifted into a proper DfE AI-usage policy. |
 | A.2.3 Alignment with other policies | Aligns with DfE tooling defaults (kubectl / Azure, not CloudFoundry) and the DfE Teacher Services incident playbook — see `docs/artefact_examples/`. | — |
 
-### 4.2 A.3 — Internal organisation
+### 5.2 A.3 — Internal organisation
 
 | Control | Evidence | Gap |
 |---|---|---|
 | A.3.2 AI roles and responsibilities | `plan.md` "Team roles (three people)" section names owners for Rails/UI, prompts/eval, and corpus/Teams integration. | Only a team-of-three, not a full RACI. |
 
-### 4.3 A.5 — Assessing impacts of AI systems
+### 5.3 A.5 — Assessing impacts of AI systems
 
 | Control | Evidence | Gap |
 |---|---|---|
@@ -88,7 +150,7 @@ control we do implement.
 | A.5.3 Assessing impacts on individuals | The tool does not affect individuals directly — its outputs are advisory drafts an on-caller reads. | Downstream DfE staff (technical leads named in the post-incident review) are named by the human filling the form, not inferred by Claude. |
 | A.5.4 Assessing societal impacts | Refusal-over-invention default is the primary societal safeguard (see A.6.2.5). The corpus is synthetic so no organisational data leaks in incident reports produced. | Bias testing not performed — the corpus is uniform in voice and no demographic axes are exercised. |
 
-### 4.4 A.6 — AI system lifecycle
+### 5.4 A.6 — AI system lifecycle
 
 | Control | Evidence | Gap |
 |---|---|---|
@@ -100,7 +162,7 @@ control we do implement.
 | A.6.2.7 AI system operation and monitoring | Per-artefact usage tokens + cache-hit-rate + cost displayed on the incident show page (`AnthropicPricing.summary_line`). Log lines from `TeamsNotifier` for delivery outcomes. | No aggregated dashboard; no drift detection; no alerting on cost or error spikes. |
 | A.6.2.8 AI system technical documentation | `README.md` (setup + stack), `plan.md` (feature spec), `docs/ai-log.md` (change history), `docs/compliance.md` (this doc). | — |
 
-### 4.5 A.7 — Data for AI systems
+### 5.5 A.7 — Data for AI systems
 
 | Control | Evidence | Gap |
 |---|---|---|
@@ -109,14 +171,14 @@ control we do implement.
 | A.7.4 Data provenance | Fully synthetic. `plan.md` "Non-goals" explicitly rules out real supplier / user data. No PII in the corpus. | — |
 | A.7.5 Data preparation | `PromptSanitizer` (secrets + email redaction). `RunbookCorpus.formatted_for_prompt` builds the deterministic system-prompt string committed to git. | — |
 
-### 4.6 A.8 — Information for interested parties
+### 5.6 A.8 — Information for interested parties
 
 | Control | Evidence | Gap |
 |---|---|---|
 | A.8.2 System documentation and information for users | Intake form declares "API keys and email addresses are automatically redacted". The show page tags each artefact by outcome (Retrieved / Drafted / Refused). Drafted-from-scratch artefacts are labelled as such — the user is never told the AI matched a runbook when it didn't. The review artefact opens with the retrospective prime directive quote verbatim so users know the intent. | No standalone end-user guide beyond `README.md`. |
 | A.8.4 Communication of incidents | Refusal reasons are surfaced in the UI ("No runbook covers this — escalate to @…"). Teams integration (Step 5) posts each artefact into the incident channel with structured Adaptive Cards. | — |
 
-### 4.7 A.9 — Use of AI systems
+### 5.7 A.9 — Use of AI systems
 
 | Control | Evidence | Gap |
 |---|---|---|
@@ -124,14 +186,14 @@ control we do implement.
 | A.9.3 Objectives for responsible use of AI | Refusal-over-invention default (Step 3 prompt); AI drafts only the factual header of the review, humans discuss the reflective questions (Step 4); blameless voice enforced by prompt (Step 4); all outputs are advisory — no code is executed. | — |
 | A.9.4 Responsible use documentation | This document. | — |
 
-### 4.8 A.10 — Third-party and customer relationships
+### 5.8 A.10 — Third-party and customer relationships
 
 | Control | Evidence | Gap |
 |---|---|---|
 | A.10.2 Allocation of responsibilities | Anthropic is the model provider (responsible for model behaviour and safety); we are the AI-system builder (responsible for prompts, corpus, guardrails, UX and this AIMS mapping). | — |
 | A.10.3 Suppliers | Third-party dependencies are: Anthropic API, GOV.UK Notify (referenced in one runbook), Microsoft Teams (integration target). All listed in `Gemfile` / `package.json` / plan.md. | Formal supplier assessment not performed — hackathon MVP. |
 
-## 5. Known gaps
+## 6. Known gaps
 
 Consolidated list of everything flagged in the Gap columns above:
 
@@ -151,7 +213,12 @@ Consolidated list of everything flagged in the Gap columns above:
    documented.
 9. **No end-user guide beyond `README.md`.**
 
-## 6. Change log
+## 7. Change log
 
 - 2026-08-06 — initial draft (David Feetenby). Reflects the state
   of the tool at the end of Step 7 on `david/step-seven`.
+- 2026-08-06 — added section 3 explaining the architecture as
+  Cache-Augmented Generation (CAG), not RAG, with the trade-offs
+  table and the compliance implications (fewer suppliers, simpler
+  data provenance, fewer failure modes, direct upper bound on
+  corpus size). Renumbered subsequent sections.
