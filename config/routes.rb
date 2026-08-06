@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
-  root to: "incidents#new"
-  resources :incidents, only: %i[new create show] do
+  root to: "incidents#index"
+  resources :incidents, only: %i[index new create show] do
     resource :process_artefact, only: %i[create] do
       get :download
     end
