@@ -1,67 +1,211 @@
+<style>
+  /* Approximate MoJ .moj-filter styling using GOV.UK design tokens.
+     Kept in-page (rather than webpack) so the change is a single-file
+     edit for the hackathon build. */
+  .app-filter {
+    background-color: #f3f2f1;
+    padding: 15px 20px;
+    margin-bottom: 30px;
+  }
+  .app-filter__header {
+    border-bottom: 1px solid #b1b4b6;
+    margin: -15px -20px 15px -20px;
+    padding: 10px 20px;
+    background-color: #1d70b8;
+    color: #ffffff;
+  }
+  .app-filter__header .govuk-heading-m { color: #ffffff; margin: 0; }
+  .app-filter__tag {
+    display: inline-block;
+    background: #ffffff;
+    border: 1px solid #b1b4b6;
+    padding: 3px 8px;
+    margin-bottom: 5px;
+    text-decoration: none;
+    font-size: 16px;
+    color: #0b0c0c;
+  }
+  .app-filter__tag:hover { background: #f3f2f1; }
+  .app-filter__tag .cross { color: #d4351c; font-weight: bold; margin-right: 4px; }
+</style>
+
 <h1 class="govuk-heading-l">Incidents</h1>
 
 <p class="govuk-body">
-  <%= link_to "Report a new incident", new_incident_path, class: "govuk-button", data: { module: "govuk-button" } %>
+  <%= link_to "Report a new incident", new_incident_path,
+              class: "govuk-button", data: { module: "govuk-button" } %>
 </p>
 
-<nav class="govuk-!-margin-bottom-6" aria-label="Filter incidents by status">
-  <ul class="govuk-list govuk-!-margin-bottom-0">
-    <%
-      filters = [
-        ["all",      "All",      incidents_path],
-        ["open",     "Open",     incidents_path(status: "open")],
-        ["resolved", "Resolved", incidents_path(status: "resolved")],
-      ]
-    %>
-    <% filters.each do |key, label, href| %>
-      <% here = (key == "all" && @status_filter.nil?) || key == @status_filter %>
-      <li class="govuk-!-display-inline-block govuk-!-margin-right-6 govuk-!-margin-bottom-0">
-        <% if here %>
-          <strong class="govuk-body govuk-!-font-weight-bold" aria-current="page">
-            <%= label %>
-            <span class="govuk-!-font-weight-regular govuk-!-colour-secondary">(<%= @counts[key] %>)</span>
-          </strong>
-        <% else %>
-          <%= link_to href, class: "govuk-link govuk-link--no-visited-state" do %>
-            <%= label %>
-            <span class="govuk-!-colour-secondary">(<%= @counts[key] %>)</span>
-          <% end %>
-        <% end %>
-      </li>
-    <% end %>
-  </ul>
-</nav>
+<div class="govuk-grid-row">
 
-<% if @incidents.empty? %>
-  <p class="govuk-body govuk-hint">No incidents match this filter.</p>
-<% else %>
-  <table class="govuk-table">
-    <caption class="govuk-visually-hidden">Incidents</caption>
-    <thead class="govuk-table__head">
-      <tr class="govuk-table__row">
-        <th scope="col" class="govuk-table__header">Ref</th>
-        <th scope="col" class="govuk-table__header">Title</th>
-        <th scope="col" class="govuk-table__header">Service</th>
-        <th scope="col" class="govuk-table__header">Reported</th>
-        <th scope="col" class="govuk-table__header">Status</th>
-        <th scope="col" class="govuk-table__header">Artefacts</th>
-      </tr>
-    </thead>
-    <tbody class="govuk-table__body">
-      <% @incidents.each do |incident| %>
-        <% artefact_count = [incident.process_artefact, incident.runbook_artefact, incident.review_artefact].count(&:present?) %>
-        <tr class="govuk-table__row">
-          <td class="govuk-table__cell"><%= link_to "INC-#{incident.id}", incident_path(incident), class: "govuk-link" %></td>
-          <td class="govuk-table__cell"><%= link_to incident.title, incident_path(incident), class: "govuk-link" %></td>
-          <td class="govuk-table__cell"><%= incident.service %></td>
-          <td class="govuk-table__cell"><%= incident.created_at.strftime("%-d %b %Y %H:%M") %></td>
-          <td class="govuk-table__cell">
-            <%= govuk_tag(text: incident.status.capitalize,
-                          colour: incident.status == "open" ? "red" : "green") %>
-          </td>
-          <td class="govuk-table__cell"><%= artefact_count %>&nbsp;/&nbsp;3</td>
-        </tr>
+  <%# ============================================================ %>
+  <%# Filter sidebar (MoJ-inspired)                                %>
+  <%# ============================================================ %>
+  <div class="govuk-grid-column-one-third">
+    <section class="app-filter" aria-label="Filter incidents">
+      <div class="app-filter__header">
+        <h2 class="govuk-heading-m">Filter</h2>
+      </div>
+
+      <% if @status_filter.any? || @service_filter.any? %>
+        <h3 class="govuk-heading-s govuk-!-margin-bottom-2">Selected filters</h3>
+        <ul class="govuk-list govuk-!-margin-bottom-3">
+          <% @status_filter.each do |s| %>
+            <li>
+              <%= link_to incidents_path(status: @status_filter - [s], service: @service_filter),
+                          class: "app-filter__tag",
+                          aria: { label: "Remove filter Status: #{s.capitalize}" } do %>
+                <span class="cross" aria-hidden="true">×</span>Status: <%= s.capitalize %>
+              <% end %>
+            </li>
+          <% end %>
+          <% @service_filter.each do |s| %>
+            <li>
+              <%= link_to incidents_path(status: @status_filter, service: @service_filter - [s]),
+                          class: "app-filter__tag",
+                          aria: { label: "Remove filter Service: #{s}" } do %>
+                <span class="cross" aria-hidden="true">×</span>Service: <%= s %>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+        <p class="govuk-body-s govuk-!-margin-bottom-4">
+          <%= link_to "Clear filters", incidents_path,
+                      class: "govuk-link govuk-link--no-visited-state" %>
+        </p>
       <% end %>
-    </tbody>
-  </table>
-<% end %>
+
+      <%= form_with url: incidents_path, method: :get, local: true do %>
+        <div class="govuk-form-group govuk-!-margin-bottom-4">
+          <fieldset class="govuk-fieldset">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">
+              <h3 class="govuk-fieldset__heading">Status</h3>
+            </legend>
+            <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
+              <% Incident::STATUSES.each do |s| %>
+                <div class="govuk-checkboxes__item">
+                  <%= check_box_tag "status[]", s, @status_filter.include?(s),
+                        class: "govuk-checkboxes__input", id: "status-#{s}" %>
+                  <%= label_tag "status-#{s}",
+                        "#{s.capitalize} (#{@status_counts[s] || 0})",
+                        class: "govuk-label govuk-checkboxes__label" %>
+                </div>
+              <% end %>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="govuk-form-group govuk-!-margin-bottom-4">
+          <fieldset class="govuk-fieldset">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">
+              <h3 class="govuk-fieldset__heading">Service</h3>
+            </legend>
+            <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
+              <% Incident::SERVICES.each_with_index do |s, i| %>
+                <div class="govuk-checkboxes__item">
+                  <%= check_box_tag "service[]", s, @service_filter.include?(s),
+                        class: "govuk-checkboxes__input", id: "service-#{i}" %>
+                  <%= label_tag "service-#{i}",
+                        "#{s} (#{@service_counts[s] || 0})",
+                        class: "govuk-label govuk-checkboxes__label" %>
+                </div>
+              <% end %>
+            </div>
+          </fieldset>
+        </div>
+
+        <%= submit_tag "Apply filters",
+              class: "govuk-button govuk-!-margin-bottom-0",
+              data: { module: "govuk-button" } %>
+      <% end %>
+    </section>
+  </div>
+
+  <%# ============================================================ %>
+  <%# Results                                                      %>
+  <%# ============================================================ %>
+  <div class="govuk-grid-column-two-thirds">
+    <% if @incidents.empty? %>
+      <p class="govuk-body govuk-hint">No incidents match this filter.</p>
+    <% else %>
+      <p class="govuk-body-s govuk-!-colour-secondary govuk-!-margin-bottom-2">
+        Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %>
+      </p>
+      <table class="govuk-table">
+        <caption class="govuk-visually-hidden">Incidents</caption>
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header">Ref</th>
+            <th scope="col" class="govuk-table__header">Title</th>
+            <th scope="col" class="govuk-table__header">Service</th>
+            <th scope="col" class="govuk-table__header">Reported</th>
+            <th scope="col" class="govuk-table__header">Status</th>
+            <th scope="col" class="govuk-table__header">Artefacts</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          <% @incidents.each do |incident| %>
+            <% artefact_count = [incident.process_artefact, incident.runbook_artefact, incident.review_artefact].count(&:present?) %>
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell"><%= link_to "INC-#{incident.id}", incident_path(incident), class: "govuk-link" %></td>
+              <td class="govuk-table__cell"><%= link_to incident.title, incident_path(incident), class: "govuk-link" %></td>
+              <td class="govuk-table__cell"><%= incident.service %></td>
+              <td class="govuk-table__cell"><%= incident.created_at.strftime("%-d %b %Y %H:%M") %></td>
+              <td class="govuk-table__cell">
+                <%= govuk_tag(text: incident.status.capitalize,
+                              colour: incident.status == "open" ? "red" : "green") %>
+              </td>
+              <td class="govuk-table__cell"><%= artefact_count %>&nbsp;/&nbsp;3</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <% if @pagy.pages > 1 %>
+        <nav class="govuk-pagination" role="navigation" aria-label="Pagination">
+          <% if @pagy.prev %>
+            <div class="govuk-pagination__prev">
+              <%= link_to pagy_url_for(@pagy, @pagy.prev), rel: "prev", class: "govuk-link govuk-pagination__link" do %>
+                <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                  <path d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z"></path>
+                </svg>
+                <span class="govuk-pagination__link-title">Previous</span>
+              <% end %>
+            </div>
+          <% end %>
+
+          <ul class="govuk-pagination__list">
+            <% pagy_series(@pagy).each do |item| %>
+              <% if item == :gap %>
+                <li class="govuk-pagination__item govuk-pagination__item--ellipses">&ctdot;</li>
+              <% elsif item.is_a?(String) %>
+                <%# pagy marks the current page as a String; others are Integers %>
+                <li class="govuk-pagination__item govuk-pagination__item--current">
+                  <a class="govuk-link govuk-pagination__link" href="<%= pagy_url_for(@pagy, item.to_i) %>"
+                     aria-label="Page <%= item %>" aria-current="page"><%= item %></a>
+                </li>
+              <% else %>
+                <li class="govuk-pagination__item">
+                  <%= link_to item, pagy_url_for(@pagy, item),
+                              class: "govuk-link govuk-pagination__link",
+                              aria: { label: "Page #{item}" } %>
+                </li>
+              <% end %>
+            <% end %>
+          </ul>
+
+          <% if @pagy.next %>
+            <div class="govuk-pagination__next">
+              <%= link_to pagy_url_for(@pagy, @pagy.next), rel: "next", class: "govuk-link govuk-pagination__link" do %>
+                <span class="govuk-pagination__link-title">Next</span>
+                <svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                  <path d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z"></path>
+                </svg>
+              <% end %>
+            </div>
+          <% end %>
+        </nav>
+      <% end %>
+    <% end %>
+  </div>
+</div>

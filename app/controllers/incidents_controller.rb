@@ -1,13 +1,18 @@
 class IncidentsController < ApplicationController
   def index
-    @status_filter = params[:status].to_s.presence_in(Incident::STATUSES)
+    # Checkbox filters — each dimension is a set of selected values.
+    # Empty set means "no filter on this dimension".
+    @status_filter  = Array(params[:status]).select  { |s| Incident::STATUSES.include?(s) }
+    @service_filter = Array(params[:service]).select { |s| Incident::SERVICES.include?(s) }
+
     scope = Incident.includes(:process_artefact, :runbook_artefact, :review_artefact).recent
-    @incidents = @status_filter ? scope.where(status: @status_filter) : scope
-    @counts = {
-      "all"      => Incident.count,
-      "open"     => Incident.where(status: "open").count,
-      "resolved" => Incident.where(status: "resolved").count,
-    }
+    scope = scope.where(status: @status_filter)   if @status_filter.any?
+    scope = scope.where(service: @service_filter) if @service_filter.any?
+
+    @pagy, @incidents = pagy(scope, limit: 20)
+
+    @status_counts  = Incident.group(:status).count.tap  { |h| h["all"] = Incident.count }
+    @service_counts = Incident.group(:service).count.tap { |h| h["all"] = Incident.count }
   end
 
   def new
