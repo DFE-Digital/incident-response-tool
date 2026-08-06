@@ -80,65 +80,56 @@ class ReviewArtefactsController < ApplicationController
     process = incident.process_artefact
     severity_row = process ? "<strong>Priority:</strong> #{h.call(process.severity_guess)}<br>" : ""
 
+    # htmltoword needs a plain HTML fragment — no doctype, html, head,
+    # body, meta or Office XML namespaces. It builds the docx envelope
+    # itself; wrapper elements corrupt document.xml and Word refuses.
     <<~HTML
-      <!DOCTYPE html>
-      <html xmlns:o="urn:schemas-microsoft-com:office:office"
-            xmlns:w="urn:schemas-microsoft-com:office:word"
-            xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta charset="utf-8">
-        <title>Incident ##{incident.id} — #{h.call(incident.title)} — Review</title>
-      </head>
-      <body>
-        <h1>Incident report ##{incident.id}: #{h.call(incident.title)}</h1>
+      <h1>Incident report ##{incident.id}: #{h.call(incident.title)}</h1>
 
-        <p>
-          <strong>Status:</strong> #{h.call(incident.status.capitalize)}<br>
-          <strong>Start date &amp; time:</strong> #{h.call(incident.created_at.strftime("%-d %B %Y at %H:%M"))}<br>
-          <strong>End date &amp; time:</strong> #{h.call(review.end_datetime.strftime("%-d %B %Y at %H:%M"))}<br>
-          <strong>Application / process:</strong> #{h.call(incident.service)}<br>
-          #{severity_row}
-          <strong>Technical lead:</strong> #{h.call(review.technical_lead.presence || '(not recorded)')}<br>
-          <strong>Comms lead:</strong> #{h.call(review.comms_lead.presence || '(not recorded)')}<br>
-          <strong>Support lead:</strong> #{h.call(review.support_lead.presence || '(not recorded)')}
-        </p>
+      <p>
+        <strong>Status:</strong> #{h.call(incident.status.capitalize)}<br>
+        <strong>Start date &amp; time:</strong> #{h.call(incident.created_at.strftime("%-d %B %Y at %H:%M"))}<br>
+        <strong>End date &amp; time:</strong> #{h.call(review.end_datetime.strftime("%-d %B %Y at %H:%M"))}<br>
+        <strong>Application / process:</strong> #{h.call(incident.service)}<br>
+        #{severity_row}
+        <strong>Technical lead:</strong> #{h.call(review.technical_lead.presence || '(not recorded)')}<br>
+        <strong>Comms lead:</strong> #{h.call(review.comms_lead.presence || '(not recorded)')}<br>
+        <strong>Support lead:</strong> #{h.call(review.support_lead.presence || '(not recorded)')}
+      </p>
 
-        <p><strong>User impact:</strong> #{h.call(review.user_impact)}</p>
+      <p><strong>User impact:</strong> #{h.call(review.user_impact)}</p>
 
-        <h2>What happened</h2>
-        <p>#{description_html}</p>
+      <h2>What happened</h2>
+      <p>#{description_html}</p>
 
-        <h2>Timeline</h2>
-        <table border="1" cellpadding="4" cellspacing="0">
-          <tr><th>Time</th><th>Event</th></tr>
-          #{timeline_rows}
-        </table>
+      <h2>Timeline</h2>
+      <table>
+        <tr><th>Time</th><th>Event</th></tr>
+        #{timeline_rows}
+      </table>
 
-        <h2>Incident Review</h2>
-        <blockquote><em>#{h.call(PRIME_DIRECTIVE)}</em></blockquote>
+      <h2>Incident Review</h2>
+      <p><em>#{h.call(PRIME_DIRECTIVE)}</em></p>
 
-        <p><em>For the retrospective meeting. Fill these in together as
-        a team.</em></p>
+      <p><em>For the retrospective meeting. Fill these in together as a team.</em></p>
 
-        <p><strong>Date &amp; time:</strong> </p>
-        <p><strong>Attending:</strong> </p>
-        <p><strong>Root cause:</strong> </p>
+      <p><strong>Date &amp; time:</strong> </p>
+      <p><strong>Attending:</strong> </p>
+      <p><strong>Root cause:</strong> </p>
 
-        <p><strong>Were we alerted quickly?</strong><br></p>
-        <p><strong>Were we able to diagnose and fix the immediate issue quickly?</strong><br></p>
-        <p><strong>How did we solve the problem?</strong><br></p>
-        <p><strong>Was the process followed well, were comms effective?</strong><br></p>
+      <p><strong>Were we alerted quickly?</strong></p>
+      <p><strong>Were we able to diagnose and fix the immediate issue quickly?</strong></p>
+      <p><strong>How did we solve the problem?</strong></p>
+      <p><strong>Was the process followed well, were comms effective?</strong></p>
 
-        <p><strong>What could we do to prevent this from happening again?</strong></p>
-        <ul><li> </li><li> </li><li> </li></ul>
+      <p><strong>What could we do to prevent this from happening again?</strong></p>
+      <ul><li> </li><li> </li><li> </li></ul>
 
-        <p><strong>What could we do to improve our response?</strong></p>
-        <ul><li> </li><li> </li><li> </li></ul>
+      <p><strong>What could we do to improve our response?</strong></p>
+      <ul><li> </li><li> </li><li> </li></ul>
 
-        <p><strong>What could we do to improve comms/process?</strong></p>
-        <ul><li> </li><li> </li><li> </li></ul>
-      </body>
-      </html>
+      <p><strong>What could we do to improve comms/process?</strong></p>
+      <ul><li> </li><li> </li><li> </li></ul>
     HTML
   end
 end

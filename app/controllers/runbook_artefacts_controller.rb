@@ -80,31 +80,21 @@ class RunbookArtefactsController < ApplicationController
         HTML
       end
 
+    # htmltoword needs a plain HTML fragment — no doctype, html, head,
+    # body, meta or Office XML namespaces. It builds the docx envelope
+    # itself; wrapper elements corrupt document.xml and Word refuses.
     <<~HTML
-      <!DOCTYPE html>
-      <html xmlns:o="urn:schemas-microsoft-com:office:office"
-            xmlns:w="urn:schemas-microsoft-com:office:word"
-            xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta charset="utf-8">
-        <title>Incident ##{incident.id} — #{h.call(incident.title)} — Runbook</title>
-      </head>
-      <body>
-        <h1>Incident ##{incident.id}: #{h.call(incident.title)}</h1>
-        <p>
-          <strong>Service:</strong> #{h.call(incident.service)}<br>
-          <strong>Status:</strong> #{h.call(incident.status.capitalize)}<br>
-          <strong>Reported:</strong> #{h.call(incident.created_at.strftime("%-d %B %Y at %H:%M"))}
-        </p>
+      <h1>Incident ##{incident.id}: #{h.call(incident.title)}</h1>
+      <p>
+        <strong>Service:</strong> #{h.call(incident.service)}<br>
+        <strong>Status:</strong> #{h.call(incident.status.capitalize)}<br>
+        <strong>Reported:</strong> #{h.call(incident.created_at.strftime("%-d %B %Y at %H:%M"))}
+      </p>
 
-        <h2>What happened</h2>
-        <p>#{description_html}</p>
+      <h2>What happened</h2>
+      <p>#{description_html}</p>
 
-        <hr>
-
-        #{body}
-      </body>
-      </html>
+      #{body}
     HTML
   end
 end
