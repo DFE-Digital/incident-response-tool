@@ -7,6 +7,7 @@ class IncidentsController < ApplicationController
     @incident = Incident.new(incident_params)
 
     if @incident.save
+      TeamsNotifier.incident_opened(@incident)
       redirect_to @incident
     else
       render :new, status: :unprocessable_entity

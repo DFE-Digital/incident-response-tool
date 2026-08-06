@@ -13,6 +13,310 @@ at the repo root, `plan.md` at the repo root.
 
 ---
 
+## 2026-08-06 — Session 4 (Opus 4.7)
+
+### Step 5: Teams integration (main goal, not stretch)
+
+Promoted Teams from S2 stretch into Step 5 of `plan.md` before building.
+Rationale: the DfE Teacher Services playbook (see
+`docs/artefact_examples/dfe_incident_playbook_reference.md`) treats the
+Teams thread as where an incident actually lives — moving it out of
+"if time" reflects that. Also the feature that most reduces on-caller
+toil (zero copy/paste). Dashboard → Step 6, eval → Step 7.
+
+Implementation on `david/step-five`:
+- `TeamsNotifier` service with four class methods
+  (`incident_opened` / `process_generated` / `runbook_generated` /
+  `review_generated`). Each builds an Adaptive Card and POSTs to the
+  incident service's webhook.
+- Per-service webhook env vars: `TEAMS_WEBHOOK_GHBFS`,
+  `TEAMS_WEBHOOK_EYCDT`, `TEAMS_WEBHOOK_HEYP`. Missing webhook → log
+  and skip. HTTP failure → log warning, don't blow up the artefact
+  flow. Applies to all four hook points.
+- Delivery mechanism: **Power Automate Workflow** with an "HTTP
+  request received" trigger mapped to "Post adaptive card in a chat
+  or channel". Classic Incoming Webhooks are being retired in 2025,
+  so we skipped them.
+- Payload shape: standard Teams `{type: message, attachments:
+  [{contentType: application/vnd.microsoft.card.adaptive, ...}]}`.
+  Adaptive Card v1.4, TextBlock + FactSet + Container + Action.OpenUrl.
+- Wired into `IncidentsController#create`,
+  `ProcessArtefactsController#create`,
+  `RunbookArtefactsController#create`, and
+  `ReviewArtefactsController#create` (post-transaction for the review
+  so a Claude failure doesn't leave a Teams post announcing a
+  resolution that got rolled back).
+- Added `teams_thread_id` column to `incidents` for future threading
+  via Graph API. Not used yet — first pass posts each artefact as a
+  fresh message with the incident ID in the title, which visually
+  groups them without needing OAuth app registration.
+- For local testing without setting up Teams, point the env var at
+  a webhook.site URL to inspect payloads.
+
+### Open questions / next up
+- Threading via Graph API (still a real gap — messages don't reply
+  to each other, just share a title prefix).
+- Step 6 (dashboard + export) and Step 7 (eval scorecard) are still
+  pending; user hasn't started either yet.
+
+---
+
+## 2026-08-05 — Sessions 2–3 (Sonnet 4.6 → Opus 4.7)
+
+Steps 1 through 4 shipped across a long working day, with several
+detours to fix boilerplate rot.
+
+### Step 1: Incident intake form
+
+Model swap to Sonnet 4.6 mid-session for the intake work. Built the
+`Incident` model + form + show page + persistence. Landed on `david/step-one`.
+
+- `Incident(title, description, service, status, timestamps)` with
+  four service options (later broadened; see below).
+- GDS formbuilder view (`form_with model: @incident, local: true,
+  builder: GOVUKDesignSystemFormBuilder::FormBuilder do |f|`).
+- Rails 6 form defaults to `data-remote="true"` — clicking submit
+  did nothing until we added `local: true`. Worth remembering: any
+  new form on this stack needs it.
+- API mismatch bumps discovered along the way in govuk-components
+  2.0.1: `govuk_form_with` doesn't exist (use `form_with builder:`);
+  `govuk_error_summary` must be called on the form builder inside
+  the form block; `govuk_summary_list` API differs from earlier
+  versions (fell back to plain `dl/dt/dd` with GDS classes).
+
+### Step 2: Process artefact (handed off to Serena)
+
+Wrote the initial `ProcessArtefact` model + `ClaudeProcessService` +
+controller + partial view rendering, then handed the step over to
+teammate Serena for polish + the Word-doc export feature. Serena's
+work landed on `serena/step-2` and `serena/edit-docker-compose`.
+
+Key decisions carried over from Step 2:
+- Claude call uses plain `Net::HTTP` — the official `anthropic` gem
+  requires Ruby ≥3.2 (we started on 2.7.4). Kept even after the
+  Ruby upgrade because it works and there's no reason to add a dep.
+- Structured JSON output via prompt shape, no tool-use — simpler,
+  easier to reason about failures.
+- Severity ladder became **P1/P2/P3** (not P1–P4) after the DfE
+  Teacher Services playbook reference — see below.
+
+Serena added the **Word-doc download** (`GET /incidents/:id/process_artefact/download`).
+Initial implementation was HTML-with-`.doc`-extension + `application/msword`
+MIME (Word opens it leniently). Later upgraded to real `.docx` — see
+below.
+
+### Step 3: Runbook artefact + corpus + prompt caching
+
+Landed on `david/step-three`. This step is where the "no vector DB"
+architectural bet paid off:
+
+- Synthetic corpus of **10 runbooks** in `db/seeds/runbooks/*.md`,
+  each with YAML frontmatter (runbook_id, owner, last_updated,
+  symptoms) + Markdown body in the shape from
+  `docs/artefact_examples/govuk_task_runbook_example.md`. Total
+  ~5k tokens — sits comfortably in Claude's prompt cache.
+- `RunbookCorpus` loader reads all `.md` files and formats them for
+  the system prompt.
+- `ClaudeRunbookService` sends the corpus as a
+  `cache_control: {type: "ephemeral"}` block, so subsequent calls
+  within ~5 minutes hit the cache and cost ~10% of the first call.
+- Three-state output: `retrieved | drafted | refused`. Verified
+  end-to-end with real Claude calls:
+  * DPS timeout incident → retrieved (green tag, correct runbook_id)
+  * Contract award API timeout → drafted from DPS pattern (yellow)
+  * Fire alarm in office → refused, escalated to `@ghbfs-service`
+- Later relaxed refusal criterion (user pushback: "if no runbook
+  exists i want it to make one"). Now refuses only for
+  clearly-non-operational reports; anything technical gets drafted.
+
+### Detour: Ruby 3.2 + logger + sass + node — versioning cascade
+
+Trying to `make build` after adding runbook code turned into a rabbit
+hole. Chain of issues + fixes:
+
+1. **`sass@1.102.0` needs Node ≥20.19.0** — Dependabot had bumped
+   `govuk-frontend` 3.12 → 6.4 and `webpack-dev-server` 3 → 6 in
+   the archived boilerplate. Pinned `govuk-frontend=3.12.0`,
+   `sass=1.57.1` via `resolutions`, rolled `webpack-dev-server`
+   back to `^3.11.2`.
+2. **`uninitialized constant Logger`** on assets:precompile.
+   Rails 6.1.7.10 regressed the load order in
+   `active_support/logger.rb` — `require "logger"` moved to AFTER
+   `require "active_support/logger_silence"`, so `Logger::Severity`
+   isn't defined when `logger_thread_safe_level` runs. Fix: prepend
+   `require "logger"` in `config/boot.rb`, `bin/webpack`, and
+   `bin/webpack-dev-server`. Present on both Ruby 2.7 and 3.2 —
+   not a Ruby version bug.
+3. **`error:0308010C:digital envelope routines::unsupported`** —
+   webpack 4 uses MD4 hashing, unsupported in OpenSSL 3 (ships with
+   Node 18 on Alpine). Fix: `NODE_OPTIONS=--openssl-legacy-provider`
+   on the `assets:precompile` step in the Dockerfile.
+4. **Upgraded Ruby 2.7.4 → 3.2** at user's suggestion to escape
+   the logger/gem-compat mess. Bundler bumped to 2.4.22. All the
+   above fixes still needed but system now much cleaner.
+
+The Dependabot bumps that caused this were pre-existing on master —
+easy trap for anyone else cloning this repo cold.
+
+### Detour: bundler/dev-mode container tuning
+
+- `docker-compose.dev.yml` mounts source over `/app` with an anonymous
+  volume on `/app/public/packs` to preserve the baked precompiled
+  assets. `DATABASE_URL` set in env overrides `database.yml` (which
+  defaults to a Unix socket in dev).
+- Bundler 2.4 in the Ruby 3.2 image is stricter about `Gemfile.lock`
+  — the image-time `bundle config set without` didn't stick through
+  the source mount. Fix: `BUNDLE_WITHOUT=development:test` env var.
+- Serena later switched to `bundle config unset without && bundle
+  install` on startup so dev/test gems are available inside the
+  container. Takes ~90s on first boot; subsequent boots reuse the
+  installed gems.
+
+### Detour: .docx generation (not `.doc`)
+
+Serena's original process-download shipped as HTML-with-`.doc`
+extension. User asked for real `.docx`. Renaming to `.docx` alone
+would trigger Word's "wrong format" warning (OOXML has a strict
+ZIP/schema check, unlike `.doc` which accepts HTML). Solution:
+
+- Added `htmltoword` gem — takes our existing HTML and produces
+  valid OOXML `.docx` via bundled XSLT.
+- Both download actions changed one line each:
+  `send_data Htmltoword::Document.create(html), type:
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"`.
+  Verified: downloaded files are ZIP archives with the expected
+  `[Content_Types].xml` / `word/document.xml` structure.
+- `Htmltoword::Document.create` returns the raw bytes as a String;
+  don't call `.string` on it.
+
+### Detour: govuk-components 5.x breadcrumbs API change
+
+After the Ruby 3.2 lockfile regeneration, `govuk-components` bumped
+from 2.0.1 to 5.11.1. The old shape
+`govuk_breadcrumbs(breadcrumbs: [{text: "Home", href: root_path}, ...])`
+fell through to `text.to_s` and printed literal Ruby hashes at the
+top of every page. Fix: use the Hash form
+`govuk_breadcrumbs(breadcrumbs: { "Home" => root_path, "Current" => nil })`.
+
+### Detour: CSS not loading via the lab proxy
+
+Symptom: HTML page loaded, but the browser 404'd on
+`https://code-lab8103.labs.decoded.com/packs/css/application.css`.
+Curl from localhost returned 200, so Rails was serving it correctly —
+the lab proxy at port 443 wasn't forwarding `/packs/` requests to
+the Rails app. Fix (per the memory rule): use the direct-port URL
+`https://3000-code-lab8103.labs.decoded.com/` which routes everything
+to port 3000. Not a code change.
+
+Also fixed `Rails::ApplicationController::BlockedHost` for the lab
+domain by adding
+`config.hosts << /.*\.labs\.decoded\.com/` in `development.rb`.
+
+### Reference artefacts added to shape Claude output
+
+Added two grounding docs in `docs/artefact_examples/` from user-supplied
+links (`useful_links.txt`):
+
+- `dfe_incident_playbook_reference.md` — DfE Teacher Services
+  incident playbook. Five-phase lifecycle. P1/P2/P3 severity ladder
+  with product-specific caps. Comms/tech/support-lead role trio
+  (with delivery manager / programme delivery manager / deputy
+  director / service owner as escalation). Comms surface is Teams
+  + SharePoint (not Slack). Grounds Steps 2 and 4.
+- `govuk_task_runbook_example.md` — GOV.UK Publishing mobile
+  remote-config runbook. Pre-requisites → action-phrased headings
+  → inline commands → verification → cache-purge note. Access
+  control via GitHub team membership (`@team-handle`), not named
+  people. Grounds Step 3.
+
+Also updated `plan.md` Step 4 to match the DfE
+`Incident report template.docx` shape exactly — six named review
+questions plus user_impact + root_cause, with the retrospective
+prime directive quote preserved verbatim in the rendered output.
+
+### Scope broadening: three services, not just GHBfS
+
+User asked to expand from just GHBfS to also include Child Development
+Training (EYCDT) and Help for Early Years Providers (HEYP) — the
+user works on early-years-adjacent DfE services. Changes:
+
+- `Incident::SERVICES` = GHBfS, CDT, HEYP, Other.
+- `ClaudeRunbookService` prompt updated to name all three as in-scope
+  and to escalate to the correct `@<service>-tech` / `@<service>-service`
+  handles. Refusing an operational incident because it's on CDT or
+  HEYP rather than GHBfS is explicitly disallowed.
+- Runbook corpus stayed GHBfS-shaped; for CDT/HEYP incidents Claude
+  now drafts from general SRE practice rather than refusing.
+
+### Infrastructure vocabulary: CloudFoundry → Azure Kubernetes
+
+User: "we are no longer using cloudfoundry". GOV.UK PaaS was
+decommissioned in Dec 2023; DfE is on AKS. All 10 runbook corpus
+files rewritten to use `kubectl exec` / `kubectl logs` / `kubectl
+rollout restart` / `kubectl rollout undo` and `az` for cloud-level
+ops. Pre-requisites lines updated from "Cloud Foundry CLI" to
+"`kubectl` configured against the `<service>-production` AKS
+namespace". Drafting prompt got a "Tooling" rule that explicitly
+bans emitting any `cf ...` command. Saved as a persistent memory
+`dfe-infrastructure-stack` so future sessions default correctly.
+
+### Step 4: Post-incident review
+
+Landed on `david/step-four`. Only available once an incident is
+marked resolved. Show page gets a third "Post-incident review"
+category with a "Mark resolved" button that opens a form for lead
+names, timeline notes and resolution notes. Submitting the form
+persists the user-provided fields, calls Claude to draft the review,
+and marks the incident resolved — all in one transaction so a Claude
+failure rolls the resolution back.
+
+Initial pass had Claude draft the entire DfE template (user_impact,
+root_cause, four reflective questions, three action lists,
+runbook_diff). User pushback: "review document should only fill in
+up to timeline and no further, the rest should be left to users to
+fill in". Rewrote the prompt to return only `user_impact` +
+`timeline` — the reflective sections are for the retrospective
+meeting, not for AI. Downloaded .docx has the section labels + empty
+answer lines / three empty bullets each, ready for the team to work
+through together.
+
+### Design polish: collapsible artefacts
+
+All three artefact categories (process, runbook, review) wrap their
+generated content in `<details class="govuk-details">` defaulting
+closed. Section headings always visible; users click "Show process /
+runbook / review" to expand each independently. Uses native
+`<details>` for progressive enhancement + govuk-frontend JS for the
+chevron animation.
+
+### PR + branch topology
+
+Rebases and cherry-picks kept branches in sync as teammates worked
+in parallel:
+- `david/step-one` → merged into master as PR #13.
+- `david/step-three` was rebased after `serena/edit-docker-compose`
+  merged in — one conflict on `config/routes.rb` (both branches
+  added a route), resolved by keeping both entries. Force-push with
+  `--force-with-lease` after rebase.
+- Cherry-picked Serena's `Add gemfile lock` commit onto step-three
+  when it was needed before that PR merged.
+- Later rebased `david/step-three` onto `serena/step-2` — Serena
+  added a Word-download action to the process artefact controller
+  that we merged additively.
+- Step 4 landed on `david/step-four`, merged as PR #20.
+
+### Persistent memory added
+- `dfe-infrastructure-stack` — DfE moved off CloudFoundry/GOV.UK PaaS;
+  use kubectl / Azure examples, not `cf` commands.
+- `feedback_no_claude_coauthor` (earlier session) — never add
+  Co-Authored-By: Claude trailers.
+
+### Open questions / next up (as of end of Aug 5)
+- Step 5 (Teams) — the promoted-from-stretch main goal.
+- Step 6 (dashboard + export) + Step 7 (eval) still pending.
+
+---
+
 ## 2026-08-05 — Session 1 (Opus 4.7)
 
 ### Restored session work after accidental wipe

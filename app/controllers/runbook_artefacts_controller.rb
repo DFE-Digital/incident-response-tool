@@ -7,7 +7,8 @@ class RunbookArtefactsController < ApplicationController
       return
     end
 
-    ClaudeRunbookService.new(@incident).call
+    artefact = ClaudeRunbookService.new(@incident).call
+    TeamsNotifier.runbook_generated(@incident, artefact)
     redirect_to @incident
   rescue JSON::ParserError
     redirect_to @incident, alert: "Claude returned an unexpected response — please try again."
