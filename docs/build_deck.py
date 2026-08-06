@@ -39,7 +39,7 @@ def blank_slide(prs):
 
 
 def add_text(slide, x, y, w, h, text, *, size=18, bold=False, color=GOVUK_BLACK,
-             align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP):
+             align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP, italic=False):
     tb = slide.shapes.add_textbox(x, y, w, h)
     tf = tb.text_frame
     tf.word_wrap = True
@@ -54,19 +54,21 @@ def add_text(slide, x, y, w, h, text, *, size=18, bold=False, color=GOVUK_BLACK,
         run.text = line
         run.font.size = Pt(size)
         run.font.bold = bold
+        run.font.italic = italic
         run.font.color.rgb = color
         run.font.name = "Calibri"
     return tb
 
 
-def add_bullets(slide, x, y, w, h, items, *, size=18, color=GOVUK_BLACK):
+def add_bullets(slide, x, y, w, h, items, *, size=18, color=GOVUK_BLACK,
+                space_after=8):
     tb = slide.shapes.add_textbox(x, y, w, h)
     tf = tb.text_frame
     tf.word_wrap = True
     tf.margin_left = tf.margin_right = Emu(0)
     for i, item in enumerate(items):
         p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-        p.space_after = Pt(8)
+        p.space_after = Pt(space_after)
         run = p.add_run()
         run.text = "• " + item
         run.font.size = Pt(size)
@@ -101,7 +103,6 @@ def add_arrow(slide, x1, y1, x2, y2, *, color=GOVUK_GREY, weight=2.0):
     c = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, x1, y1, x2, y2)
     c.line.color.rgb = color
     c.line.width = Pt(weight)
-    # Add arrow head
     from pptx.oxml.ns import qn
     from lxml import etree
     ln = c.line._get_or_add_ln()
@@ -125,9 +126,33 @@ def add_footer(slide, prs, page, total):
 
 
 def title_bar(slide, prs, text):
-    # Left-aligned title bar
     add_box(slide, Inches(0.5), Inches(0.4), Inches(12.3), Inches(0.7),
             text, fill=GOVUK_BLUE, size=24, align=PP_ALIGN.LEFT)
+
+
+def screenshot_placeholder(slide, x, y, w, h, caption):
+    """Dashed empty rectangle with a caption — leave room for user to
+    paste a real screenshot in PowerPoint."""
+    box = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, y, w, h)
+    box.fill.solid()
+    box.fill.fore_color.rgb = GOVUK_LIGHT
+    box.line.color.rgb = GOVUK_GREY
+    box.line.width = Pt(1.5)
+    box.line.dash_style = 7  # dashed (LineDashStyleType.DASH)
+    tf = box.text_frame
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    run = p.add_run()
+    run.text = "[  paste screenshot here  ]"
+    run.font.size = Pt(12)
+    run.font.italic = True
+    run.font.color.rgb = GOVUK_GREY
+    run.font.name = "Calibri"
+    # Caption below
+    add_text(slide, x, y + h + Inches(0.1), w, Inches(0.35),
+             caption, size=12, bold=True, color=GOVUK_BLACK,
+             align=PP_ALIGN.CENTER)
 
 
 # --------------------------------------------------------------------
@@ -136,7 +161,6 @@ def title_bar(slide, prs, text):
 def slide_1(prs):
     s = blank_slide(prs)
 
-    # Big colour block on the left
     band = s.shapes.add_shape(MSO_SHAPE.RECTANGLE,
                               0, 0, Inches(4), prs.slide_height)
     band.fill.solid()
@@ -156,8 +180,8 @@ def slide_1(prs):
              size=22, color=GOVUK_GREY)
 
     add_text(s, Inches(4.5), Inches(5.0), Inches(8.3), Inches(0.4),
-             "Three artefacts.  One incident thread.  No vector DB.",
-             size=16, bold=True, color=GOVUK_BLUE)
+             "Turning panic into a shape.",
+             size=18, bold=True, italic=True, color=GOVUK_BLUE)
 
     add_text(s, Inches(4.5), Inches(6.4), Inches(8.3), Inches(0.4),
              "David Feetenby  ·  Serena Abbott  ·  and one Claude",
@@ -165,221 +189,254 @@ def slide_1(prs):
 
 
 # --------------------------------------------------------------------
-# Slide 2 — The problem
+# Slide 2 — Introduction: poor incident management → friction + panic
 # --------------------------------------------------------------------
 def slide_2(prs):
     s = blank_slide(prs)
-    title_bar(s, prs, "The problem on-callers actually have")
+    title_bar(s, prs, "When incident management is thin, friction takes over")
 
-    add_bullets(s, Inches(0.7), Inches(1.5), Inches(12), Inches(4),
+    # Left column — the operational reality
+    add_text(s, Inches(0.7), Inches(1.4), Inches(6), Inches(0.5),
+             "The pattern we see", size=18, bold=True, color=GOVUK_BLACK)
+    add_bullets(s, Inches(0.7), Inches(2.0), Inches(6), Inches(4.5),
                 [
-                    "On-callers reconstruct incident context from scratch every time — "
-                    "no shared shape for what to capture.",
-                    "Runbook discovery is slow when someone else wrote the runbook, "
-                    "and half the runbooks aren't written down anyway.",
-                    "Post-incident reviews get rushed or skipped — the DfE template "
-                    "is good but empty templates don't fill themselves in.",
-                    "Facts (severity, timeline, decisions) get separated from the "
-                    "meeting where they're needed.",
-                    "Every artefact ends up copy-pasted into Teams by hand, which "
-                    "is where the real work actually happens.",
-                ], size=20)
+                    "On-call rotates every week; institutional memory does not.",
+                    "\"Where's the runbook for this?\" — 30 minutes of Slack "
+                    "archaeology before anyone starts fixing anything.",
+                    "Severity gets guessed, comms lag, escalation depends on "
+                    "who happens to be online.",
+                    "The retro gets skipped when the fire's out — so the same "
+                    "incident repeats six months later, with a new on-caller.",
+                    "Every incident report gets built from scratch in a "
+                    "different place. None of them get read.",
+                ], size=14, color=GOVUK_BLACK, space_after=6)
 
-    # Callout box
-    add_box(s, Inches(0.7), Inches(5.7), Inches(12), Inches(0.9),
-            "The AI value-add isn't 'answer questions from a corpus'.  It's "
-            "'reduce toil around a process the humans already run'.",
-            fill=GOVUK_LIGHT, text_color=GOVUK_BLACK,
-            size=16, bold=True, align=PP_ALIGN.LEFT)
+    # Right column — the effect
+    add_text(s, Inches(7.2), Inches(1.4), Inches(5.6), Inches(0.5),
+             "The effect", size=18, bold=True, color=GOVUK_RED)
+
+    def effect(x, y, big, small):
+        add_text(s, x, y, Inches(5.6), Inches(0.7),
+                 big, size=26, bold=True, color=GOVUK_RED)
+        add_text(s, x, y + Inches(0.65), Inches(5.6), Inches(0.5),
+                 small, size=13, color=GOVUK_GREY)
+
+    effect(Inches(7.2), Inches(2.0),
+           "Panic",
+           "Worse decisions under time pressure with no shared shape to lean on.")
+    effect(Inches(7.2), Inches(3.4),
+           "Friction",
+           "Comms tax and copy-paste tax on every single incident.")
+    effect(Inches(7.2), Inches(4.8),
+           "Repeat incidents",
+           "Same problem, six months later, different person, no lesson learned.")
+
+    # Bottom callout
+    add_box(s, Inches(0.7), Inches(6.3), Inches(12), Inches(0.7),
+            "This is a coordination problem — one AI can genuinely help with, "
+            "without replacing the humans doing the fixing.",
+            fill=GOVUK_BLACK, text_color=WHITE,
+            size=15, bold=True, align=PP_ALIGN.CENTER)
 
     add_footer(s, prs, 2, 6)
 
 
 # --------------------------------------------------------------------
-# Slide 3 — What we built (architecture diagram)
+# Slide 3 — User journey: what the system actually does
 # --------------------------------------------------------------------
 def slide_3(prs):
     s = blank_slide(prs)
-    title_bar(s, prs, "Three artefacts, one incident thread")
+    title_bar(s, prs, "The on-caller's journey through the tool")
 
-    y = Inches(1.7)
+    # Step boxes — a horizontal flow with two rows
+    step_size = 14
 
-    # Left: intake
-    add_box(s, Inches(0.4), y, Inches(2.2), Inches(1.0),
-            "Incident intake\n(GOV.UK form)", fill=GOVUK_GREY, size=14)
+    def step(n, x, y, w, h, title, body, colour=GOVUK_BLUE):
+        # Number badge
+        badge = s.shapes.add_shape(MSO_SHAPE.OVAL, x, y, Inches(0.55), Inches(0.55))
+        badge.fill.solid(); badge.fill.fore_color.rgb = colour
+        badge.line.color.rgb = colour
+        tf = badge.text_frame
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        p = tf.paragraphs[0]; p.alignment = PP_ALIGN.CENTER
+        r = p.add_run(); r.text = str(n)
+        r.font.size = Pt(16); r.font.bold = True
+        r.font.color.rgb = WHITE; r.font.name = "Calibri"
+        # Body box
+        body_x = x + Inches(0.7)
+        body_w = w - Inches(0.7)
+        add_text(s, body_x, y, body_w, Inches(0.4),
+                 title, size=13, bold=True, color=GOVUK_BLACK)
+        add_text(s, body_x, y + Inches(0.4), body_w, h - Inches(0.4),
+                 body, size=11, color=GOVUK_GREY)
 
-    # Middle: Rails + Claude
-    add_box(s, Inches(3.0), y, Inches(3.0), Inches(1.0),
-            "Rails 6.1  +  Claude Opus 4.7\n(prompt-cached corpus)",
-            fill=GOVUK_BLUE, size=14)
+    # Top row
+    row1_y = Inches(1.5)
+    step(1, Inches(0.4), row1_y, Inches(4.1), Inches(1.3),
+         "Report the incident",
+         "GOV.UK-styled form: title, service, free-text description. "
+         "PromptSanitizer strips secrets before anything leaves the app.")
+    step(2, Inches(4.6), row1_y, Inches(4.1), Inches(1.3),
+         "Get the process artefact",
+         "Immediate Claude call → severity, immediate actions, comms "
+         "actions, escalation path. Rendered as a GOV.UK task list.")
+    step(3, Inches(8.8), row1_y, Inches(4.1), Inches(1.3),
+         "Find the runbook",
+         "Cached corpus search → retrieved (green), drafted (yellow) "
+         "or refused (red). Every branch cites its source or explains itself.")
 
-    # Right column: three artefacts
-    ax = Inches(6.4)
-    aw = Inches(3.2)
-    ah = Inches(0.65)
-    add_box(s, ax, Inches(1.35), aw, ah,
-            "🔧  Process artefact",
-            fill=GOVUK_GREEN, size=13)
-    add_box(s, ax, Inches(2.10), aw, ah,
-            "📖  Runbook artefact (retrieved / drafted / refused)",
-            fill=GOVUK_GREEN, size=13)
-    add_box(s, ax, Inches(2.85), aw, ah,
-            "✅  Post-incident review",
-            fill=GOVUK_GREEN, size=13)
+    # Middle row
+    row2_y = Inches(3.4)
+    step(4, Inches(0.4), row2_y, Inches(4.1), Inches(1.3),
+         "Fix the incident",
+         "The tool does not act. It gives the on-caller structure. "
+         "The human keeps the keys, the terminal and the judgment call.",
+         colour=GOVUK_GREY)
+    step(5, Inches(4.6), row2_y, Inches(4.1), Inches(1.3),
+         "Mark resolved + fill the short form",
+         "Leads, timeline notes, resolution notes. That's it. "
+         "Claude does the boring header + timeline in the DfE template shape.")
+    step(6, Inches(8.8), row2_y, Inches(4.1), Inches(1.3),
+         "Retro from a real starting point",
+         "The reflective questions (root cause, what went well, prevention) "
+         "stay blank on purpose — those are the meeting's job, not AI's.")
 
-    # Rightmost: Teams
-    add_box(s, Inches(9.9), y, Inches(2.9), Inches(1.0),
-            "Teams channel\n(Adaptive Cards)", fill=GOVUK_GREY, size=14)
+    # Bottom row — sidebar Teams / audit / eval
+    row3_y = Inches(5.3)
+    step(7, Inches(0.4), row3_y, Inches(6.3), Inches(1.3),
+         "Every step also lands in the Teams incident thread",
+         "Adaptive Cards posted automatically — no copy-paste. When "
+         "corp policy blocks Power Automate, falls back cleanly to skip.",
+         colour=GOVUK_GREEN)
+    step(8, Inches(6.8), row3_y, Inches(6.1), Inches(1.3),
+         "Every call is measured and evaluated",
+         "Token + cache-hit-rate telemetry per artefact. spec/evals "
+         "harness runs 10 scenarios against real Claude to score behaviour.",
+         colour=GOVUK_GREEN)
 
-    # Arrows
-    add_arrow(s, Inches(2.6), Inches(2.2),  Inches(3.0), Inches(2.2))
-    add_arrow(s, Inches(6.0), Inches(2.2),  Inches(6.4), Inches(2.2))
-    add_arrow(s, Inches(9.6), Inches(2.2),  Inches(9.9), Inches(2.2))
-
-    # Bottom text — data flow
-    add_text(s, Inches(0.7), Inches(3.5), Inches(12), Inches(0.5),
-             "Each event fires an Adaptive Card into the incident's Teams thread.",
-             size=14, color=GOVUK_GREY)
-
-    # Layer of guarantees
-    add_text(s, Inches(0.7), Inches(4.2), Inches(12), Inches(0.4),
-             "Guarantees per Claude call:",
-             size=16, bold=True, color=GOVUK_BLACK)
-    add_bullets(s, Inches(0.9), Inches(4.7), Inches(12), Inches(2),
-                [
-                    "Structured JSON output — no free-form prose to parse.",
-                    "Corpus is synthetic + in git — no PII exposure.",
-                    "PromptSanitizer redacts API keys and emails before Claude sees them.",
-                    "Refuses non-operational reports rather than inventing.",
-                    "Every call records token usage + cache-hit rate for cost visibility.",
-                ], size=14, color=GOVUK_BLACK)
+    # Guiding principle strip
+    add_text(s, Inches(0.5), Inches(6.9), Inches(12.3), Inches(0.35),
+             "Guiding principle: the tool helps.  It does not decide, and it does not run commands.",
+             size=13, bold=True, italic=True, color=GOVUK_BLUE,
+             align=PP_ALIGN.CENTER)
 
     add_footer(s, prs, 3, 6)
 
 
 # --------------------------------------------------------------------
-# Slide 4 — CAG vs RAG
+# Slide 4 — See it in action (screenshot placeholders)
 # --------------------------------------------------------------------
 def slide_4(prs):
     s = blank_slide(prs)
-    title_bar(s, prs, "The architectural bet: Cache-Augmented Generation")
+    title_bar(s, prs, "See it in action")
 
-    # Two columns
-    col_w = Inches(6.0)
-    col_h = Inches(4.2)
-    top   = Inches(1.6)
+    add_text(s, Inches(0.7), Inches(1.25), Inches(12), Inches(0.4),
+             "Paste live screenshots into the boxes below before presenting.",
+             size=12, italic=True, color=GOVUK_GREY)
 
-    # RAG column (left, muted)
-    rag = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                              Inches(0.5), top, col_w, col_h)
-    rag.fill.solid(); rag.fill.fore_color.rgb = GOVUK_LIGHT
-    rag.line.color.rgb = GOVUK_GREY
-    add_text(s, Inches(0.7), Inches(1.75), Inches(5.5), Inches(0.5),
-             "RAG (what most people build)",
-             size=18, bold=True, color=GOVUK_GREY)
-    add_bullets(s, Inches(0.9), Inches(2.4), Inches(5.5), Inches(3),
-                [
-                    "Vector DB stores embedded chunks",
-                    "Embedding model turns query → vector",
-                    "Similarity search narrows the corpus",
-                    "Retrieved chunks stuffed into context",
-                    "Chunk boundaries + threshold tuning matter",
-                ], size=14, color=GOVUK_GREY)
+    # 2x2 grid of dashed placeholders
+    box_w = Inches(5.9)
+    box_h = Inches(2.55)
+    gap_x = Inches(0.4)
+    gap_y = Inches(0.6)  # extra vertical gap to leave room for caption
+    left  = Inches(0.5)
+    top   = Inches(1.7)
 
-    # CAG column (right, highlighted)
-    cag = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                              Inches(6.9), top, col_w, col_h)
-    cag.fill.solid(); cag.fill.fore_color.rgb = GOVUK_BLUE
-    cag.line.color.rgb = GOVUK_BLUE
-    add_text(s, Inches(7.1), Inches(1.75), Inches(5.5), Inches(0.5),
-             "CAG (what we built)",
-             size=18, bold=True, color=WHITE)
-    add_bullets(s, Inches(7.3), Inches(2.4), Inches(5.5), Inches(3),
-                [
-                    "Whole ~5k-token corpus in the system prompt",
-                    "Anthropic prompt cache → ~10× cheaper reads",
-                    "Retrieval = LLM attention over the full context",
-                    "Zero infrastructure: no DB, no embedder, no chunker",
-                    "Live cache-hit rate visible in the UI (≥95% typical)",
-                ], size=14, color=WHITE)
-
-    # Pull quote below
-    add_box(s, Inches(0.5), Inches(6.0), Inches(12.4), Inches(0.9),
-            "\"Attack surface is one third party: Anthropic. "
-            "RAG would add two more — the embedding vendor and the vector DB.\"",
-            fill=GOVUK_BLACK, text_color=WHITE,
-            size=16, bold=False, align=PP_ALIGN.CENTER)
+    screenshot_placeholder(s, left, top, box_w, box_h,
+                           "Incident intake form (GOV.UK styling, redaction hint)")
+    screenshot_placeholder(s, left + box_w + gap_x, top, box_w, box_h,
+                           "Show page — process artefact (severity + task list)")
+    screenshot_placeholder(s, left, top + box_h + gap_y, box_w, box_h,
+                           "Runbook artefact — retrieved with citation, or drafted from scratch")
+    screenshot_placeholder(s, left + box_w + gap_x, top + box_h + gap_y, box_w, box_h,
+                           "Post-incident review (or Teams Adaptive Card in webhook.site)")
 
     add_footer(s, prs, 4, 6)
 
 
 # --------------------------------------------------------------------
-# Slide 5 — Guardrails + observability
+# Slide 5 — Next steps / improvements
 # --------------------------------------------------------------------
 def slide_5(prs):
     s = blank_slide(prs)
-    title_bar(s, prs, "Safety, cost, evidence")
+    title_bar(s, prs, "What we'd do next")
 
-    top = Inches(1.6)
-    card_w = Inches(4.05)
-    card_h = Inches(4.6)
+    top = Inches(1.4)
+    col_w = Inches(6.1)
+    col_h = Inches(5.5)
 
-    # Three cards
-    def card(x, colour, title, items):
-        box = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                                  x, top, card_w, card_h)
-        box.fill.solid(); box.fill.fore_color.rgb = WHITE
-        box.line.color.rgb = colour
-        box.line.width = Pt(2.5)
-        # Coloured title band
-        band = s.shapes.add_shape(MSO_SHAPE.RECTANGLE,
-                                  x, top, card_w, Inches(0.7))
-        band.fill.solid(); band.fill.fore_color.rgb = colour
-        band.line.fill.background()
-        add_text(s, x + Inches(0.15), top + Inches(0.15),
-                 card_w - Inches(0.3), Inches(0.4),
-                 title, size=17, bold=True, color=WHITE)
-        add_bullets(s, x + Inches(0.2), top + Inches(0.9),
-                    card_w - Inches(0.4), card_h - Inches(1.0),
-                    items, size=13, color=GOVUK_BLACK)
+    # Left column — feature completion & scale
+    left = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                              Inches(0.4), top, col_w, col_h)
+    left.fill.solid(); left.fill.fore_color.rgb = WHITE
+    left.line.color.rgb = GOVUK_BLUE
+    left.line.width = Pt(2.5)
+    band = s.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                              Inches(0.4), top, col_w, Inches(0.7))
+    band.fill.solid(); band.fill.fore_color.rgb = GOVUK_BLUE
+    band.line.fill.background()
+    add_text(s, Inches(0.6), top + Inches(0.15), col_w - Inches(0.4),
+             Inches(0.4), "Product",
+             size=17, bold=True, color=WHITE)
+    add_bullets(s, Inches(0.6), top + Inches(0.95),
+                col_w - Inches(0.4), col_h - Inches(1.1),
+                [
+                    "Live Teams demo via an M365 Developer Program tenant "
+                    "(DfE Power Automate is admin-blocked).",
+                    "Threaded Teams replies via Graph API — currently each "
+                    "artefact is a fresh message tagged with the incident ID.",
+                    "MCP server — expose the same three tools to Claude "
+                    "Desktop so the copilot lives where on-callers already are.",
+                    "Slack integration mirroring the Teams path for teams "
+                    "who aren't on Teams.",
+                    "Streaming responses — SSE so artefacts render "
+                    "token-by-token during the demo.",
+                    "Human-editable artefacts — right now Claude drafts and "
+                    "you re-run; ideally you can tweak inline.",
+                ], size=12, color=GOVUK_BLACK, space_after=6)
 
-    card(Inches(0.4), GOVUK_GREEN, "Guardrails", [
-        "PromptSanitizer redacts API keys, Bearer tokens and emails "
-        "before every Claude call.",
-        "Length caps: title ≤200, description ≤10 000 chars.",
-        "Refuse-over-invent — non-operational reports get an "
-        "honest 'no runbook covers this' banner.",
-        "Blameless voice enforced in the review prompt.",
-    ])
-
-    card(Inches(4.65), GOVUK_BLUE, "Cost visibility", [
-        "Every artefact stores input / cache-creation / cache-read / "
-        "output tokens.",
-        "AnthropicPricing.summary_line renders per-artefact:",
-        "   \"10 996 tokens · $0.06 · 100% cache hit\"",
-        "Cache-hit rate is a live proof that CAG is behaving.",
-    ])
-
-    card(Inches(8.9), GOVUK_RED, "Evidence", [
-        "spec/evals — 10 curated scenarios in three buckets: "
-        "retrieval, draft, refuse.",
-        "bundle exec rake eval:runbook prints a scorecard against "
-        "real Claude calls.",
-        "Full run: 10/10 pass, 0 hallucinations, ~$0.96 total.",
-        "Wrapped in a transaction so test data doesn't persist.",
-    ])
+    # Right column — safety & scale-out
+    right = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                               Inches(6.85), top, col_w, col_h)
+    right.fill.solid(); right.fill.fore_color.rgb = WHITE
+    right.line.color.rgb = GOVUK_GREEN
+    right.line.width = Pt(2.5)
+    band2 = s.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                               Inches(6.85), top, col_w, Inches(0.7))
+    band2.fill.solid(); band2.fill.fore_color.rgb = GOVUK_GREEN
+    band2.line.fill.background()
+    add_text(s, Inches(7.05), top + Inches(0.15), col_w - Inches(0.4),
+             Inches(0.4), "Trust and scale",
+             size=17, bold=True, color=WHITE)
+    add_bullets(s, Inches(7.05), top + Inches(0.95),
+                col_w - Inches(0.4), col_h - Inches(1.1),
+                [
+                    "Grow the eval corpus (spec/evals) beyond 10 scenarios; "
+                    "add an adversarial / prompt-injection bucket.",
+                    "Continuous eval on production inputs — drift detection "
+                    "for prompts + Claude behaviour.",
+                    "Aggregate cost / cache-hit dashboard (per-service, "
+                    "per-day) — schema is already there.",
+                    "Migrate corpus to RAG once it grows past ~200 000 "
+                    "tokens (currently ~5 000, plenty of headroom).",
+                    "Formal impact assessment + standalone AI-usage policy "
+                    "to close the remaining ISO 42001 gaps.",
+                    "Bias testing on outputs — the corpus is uniform in "
+                    "voice; needs diverse-authorship sampling.",
+                    "Background job for Teams posts + Claude calls so the "
+                    "UI never blocks on network I/O.",
+                ], size=12, color=GOVUK_BLACK, space_after=6)
 
     add_footer(s, prs, 5, 6)
 
 
 # --------------------------------------------------------------------
-# Slide 6 — What shipped / results
+# Slide 6 — What shipped (kept from previous version, per user)
 # --------------------------------------------------------------------
 def slide_6(prs):
     s = blank_slide(prs)
     title_bar(s, prs, "What shipped")
 
-    # Left half: shipped list
     add_text(s, Inches(0.6), Inches(1.5), Inches(6), Inches(0.4),
              "Sprint outcome", size=20, bold=True, color=GOVUK_BLACK)
     add_bullets(s, Inches(0.6), Inches(2.0), Inches(6.5), Inches(4.5),
@@ -394,7 +451,6 @@ def slide_6(prs):
                     "Stretch S3 — ISO 42001 compliance mapping",
                 ], size=16, color=GOVUK_BLACK)
 
-    # Right half: numbers
     add_text(s, Inches(7.5), Inches(1.5), Inches(5.4), Inches(0.4),
              "By the numbers", size=20, bold=True, color=GOVUK_BLACK)
 
@@ -411,7 +467,6 @@ def slide_6(prs):
     stat(Inches(7.5), Inches(4.9), "3", "artefacts per incident", GOVUK_GREY)
     stat(Inches(10.3), Inches(4.9), "0", "vector DBs deployed", GOVUK_RED)
 
-    # Footer strip: what's next
     add_box(s, Inches(0.5), Inches(6.4), Inches(12.4), Inches(0.7),
             "Next: live Teams via M365 dev tenant  ·  larger eval set  ·  "
             "aggregate cost dashboard  ·  MCP / Slack bolt-ons",
