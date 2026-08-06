@@ -13,6 +13,120 @@ at the repo root, `plan.md` at the repo root.
 
 ---
 
+## 2026-08-06 — Session 5 (Opus 4.7)
+
+Cross-cutting fixes + Step 6 (dashboard). Retrospective — some of this
+was actually 2026-08-05, logged today.
+
+### Retrospective — unblocking `make dev` on the lab VM
+
+- Podman needed `docker.io` as an unqualified-search-registry — added
+  `~/.config/containers/registries.conf` (user-level only).
+- Upstream deleted `Gemfile.lock`; regenerated with Ruby 3.2 + bundler
+  2.4.22 via `podman run --rm ruby:3.2-alpine bundle lock`.
+- The image bakes `bundle config set without 'development test'`, but
+  dev compose uses `RAILS_ENV=development` and needs dev+test gems.
+  Fixed on the compose side (Dockerfile untouched) — added
+  `BUNDLE_WITHOUT=""`, `bundle config unset without`, `bundle install`,
+  and `apk add build-base` (runtime image lacked `make`) to the
+  container command in `docker-compose.dev.yml`.
+- `config.hosts << /.*\.labs\.decoded\.com/` already whitelisted the
+  lab proxy hostnames — so both `https://3000-<host>.labs.decoded.com/`
+  and `/proxy/3000/` work once web is up.
+
+### Step 2 polish attempt (reverted)
+
+- Converted the three process-artefact lists on the show page into a
+  GOV.UK task list with per-item status (not started / in progress /
+  done). Extended the serialized arrays to `{"label", "status"}`
+  hashes; added `items_for(category)` + `advance_status!` on
+  `ProcessArtefact`; new `POST /incidents/:incident_id/process_artefact/advance`
+  route + `_task_list_section.html.erb` partial.
+- Reverted the whole thing on user request — back to plain bullets +
+  ordered list. Flattened the one persisted hash-form artefact via
+  `bin/rails runner`.
+
+### Downloadable .docx artefacts (all three)
+
+- Added a "Download as Word document" secondary button on each
+  artefact section of the incident show page (process, runbook,
+  review).
+- Started as HTML-wrapped-as-.doc (zero-dep hack); user switched to a
+  real `.docx` via the `htmltoword` gem.
+- First cut wouldn't open in Microsoft Word. Diagnosis: each
+  `build_doc` was returning a full `<!DOCTYPE html><html
+  xmlns:o="…">…<body>` document — legacy from the .doc-as-HTML
+  approach. htmltoword's XSLT wraps whatever you give it in a docx
+  envelope; the wrapper elements corrupted `document.xml` inside the
+  zip and Word refused it.
+- Fixed by stripping all three `build_doc` methods to plain HTML
+  fragments — just `<h1>`, `<p>`, `<ul>`, `<table>` etc. Also
+  dropped `<hr>` (no clean WordML equivalent) and swapped
+  `<blockquote>` in the review for `<p><em>…</em></p>`
+  (htmltoword's blockquote handling is inconsistent).
+- **Not verified end-to-end** after the fix: the app has been down
+  through the session, so this needs a `make dev` + click-through
+  before we trust it.
+
+### Blank-answer validation on the post-review form
+
+- Added `presence: true` validations to `ReviewArtefact` for
+  `technical_lead`, `comms_lead`, `support_lead`, `timeline_notes`,
+  `resolution_notes` — GDS-style imperative messages
+  (`"Enter the technical lead"`, etc.) rather than Rails' default
+  "can't be blank".
+- No controller or view changes needed: form already renders
+  `f.govuk_error_summary` and the controller already rescues
+  `ActiveRecord::RecordInvalid` → re-render `:new` with
+  `unprocessable_entity`.
+
+### Process artefact generates on incident create
+
+- Moved `ClaudeProcessService.new(@incident).call` from the "Generate
+  process" button to `IncidentsController#create`, immediately after
+  `@incident.save`.
+- Wrapped in `begin/rescue` (parse error, missing key, generic
+  `StandardError`) so a flaky LLM call can't undo the incident create.
+  On failure the user still lands on the show page and the existing
+  "Generate process" button acts as a retry — no template changes.
+- Trade-off: the new-incident submit now blocks for the length of the
+  Claude call (~3–10s). Same latency as the button click it replaces,
+  just moved earlier. Async later = ActiveJob adapter change.
+
+### Step 6 — incident dashboard (/incidents index)
+
+- New `IncidentsController#index`; scoped by `?status=open|resolved`,
+  eager-loads the three artefact associations to avoid N+1.
+- Root route moved from `incidents#new` to `incidents#index` so the
+  dashboard is the demo landing page.
+- New `app/views/incidents/index.html.erb`: primary "Report a new
+  incident" button, filter row, and GOV.UK table with columns
+  Ref (`INC-#{id}`), Title, Service, Reported, Status tag,
+  Artefacts (`N / 3`).
+- Skipped plan.md's "Export as Markdown" bullet per user instruction
+  — the per-artefact .docx download already covers export needs.
+
+### Filter polish to GDS standards
+
+- Rewrote the filter as a semantic `<nav aria-label="Filter incidents
+  by status">` wrapping a `<ul class="govuk-list">`.
+- Current filter is a non-linked `<strong aria-current="page">` —
+  matches GDS's "the page you're on shouldn't be a link" pattern.
+- Non-current filters use `govuk-link` + `govuk-link--no-visited-state`
+  (filters get clicked repeatedly, shouldn't turn purple).
+- Counts styled with `govuk-!-colour-secondary` — proper GDS secondary
+  text colour, replacing the earlier misuse of `.govuk-hint`.
+
+### Open questions / next up
+
+- **Verify `.docx` files open in Word** after the wrapper strip — app
+  was down through this session so it wasn't tested.
+- **Step 7** (eval + non-functionals) is the last unshipped plan item:
+  seeded eval set in `spec/evals/`, RSpec scorecard, cost + cache-hit
+  panel, input length cap + secret-scan guardrails.
+
+---
+
 ## 2026-08-06 — Session 4 (Opus 4.7)
 
 ### Step 5: Teams integration (main goal, not stretch)

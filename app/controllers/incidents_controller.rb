@@ -1,4 +1,15 @@
 class IncidentsController < ApplicationController
+  def index
+    @status_filter = params[:status].to_s.presence_in(Incident::STATUSES)
+    scope = Incident.includes(:process_artefact, :runbook_artefact, :review_artefact).recent
+    @incidents = @status_filter ? scope.where(status: @status_filter) : scope
+    @counts = {
+      "all"      => Incident.count,
+      "open"     => Incident.where(status: "open").count,
+      "resolved" => Incident.where(status: "resolved").count,
+    }
+  end
+
   def new
     @incident = Incident.new
   end

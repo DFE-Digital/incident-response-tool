@@ -1,0 +1,67 @@
+<h1 class="govuk-heading-l">Incidents</h1>
+
+<p class="govuk-body">
+  <%= link_to "Report a new incident", new_incident_path, class: "govuk-button", data: { module: "govuk-button" } %>
+</p>
+
+<nav class="govuk-!-margin-bottom-6" aria-label="Filter incidents by status">
+  <ul class="govuk-list govuk-!-margin-bottom-0">
+    <%
+      filters = [
+        ["all",      "All",      incidents_path],
+        ["open",     "Open",     incidents_path(status: "open")],
+        ["resolved", "Resolved", incidents_path(status: "resolved")],
+      ]
+    %>
+    <% filters.each do |key, label, href| %>
+      <% here = (key == "all" && @status_filter.nil?) || key == @status_filter %>
+      <li class="govuk-!-display-inline-block govuk-!-margin-right-6 govuk-!-margin-bottom-0">
+        <% if here %>
+          <strong class="govuk-body govuk-!-font-weight-bold" aria-current="page">
+            <%= label %>
+            <span class="govuk-!-font-weight-regular govuk-!-colour-secondary">(<%= @counts[key] %>)</span>
+          </strong>
+        <% else %>
+          <%= link_to href, class: "govuk-link govuk-link--no-visited-state" do %>
+            <%= label %>
+            <span class="govuk-!-colour-secondary">(<%= @counts[key] %>)</span>
+          <% end %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+</nav>
+
+<% if @incidents.empty? %>
+  <p class="govuk-body govuk-hint">No incidents match this filter.</p>
+<% else %>
+  <table class="govuk-table">
+    <caption class="govuk-visually-hidden">Incidents</caption>
+    <thead class="govuk-table__head">
+      <tr class="govuk-table__row">
+        <th scope="col" class="govuk-table__header">Ref</th>
+        <th scope="col" class="govuk-table__header">Title</th>
+        <th scope="col" class="govuk-table__header">Service</th>
+        <th scope="col" class="govuk-table__header">Reported</th>
+        <th scope="col" class="govuk-table__header">Status</th>
+        <th scope="col" class="govuk-table__header">Artefacts</th>
+      </tr>
+    </thead>
+    <tbody class="govuk-table__body">
+      <% @incidents.each do |incident| %>
+        <% artefact_count = [incident.process_artefact, incident.runbook_artefact, incident.review_artefact].count(&:present?) %>
+        <tr class="govuk-table__row">
+          <td class="govuk-table__cell"><%= link_to "INC-#{incident.id}", incident_path(incident), class: "govuk-link" %></td>
+          <td class="govuk-table__cell"><%= link_to incident.title, incident_path(incident), class: "govuk-link" %></td>
+          <td class="govuk-table__cell"><%= incident.service %></td>
+          <td class="govuk-table__cell"><%= incident.created_at.strftime("%-d %b %Y %H:%M") %></td>
+          <td class="govuk-table__cell">
+            <%= govuk_tag(text: incident.status.capitalize,
+                          colour: incident.status == "open" ? "red" : "green") %>
+          </td>
+          <td class="govuk-table__cell"><%= artefact_count %>&nbsp;/&nbsp;3</td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
