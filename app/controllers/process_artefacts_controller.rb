@@ -7,7 +7,8 @@ class ProcessArtefactsController < ApplicationController
       return
     end
 
-    ClaudeProcessService.new(@incident).call
+    artefact = ClaudeProcessService.new(@incident).call
+    TeamsNotifier.process_generated(@incident, artefact)
     redirect_to @incident
   rescue JSON::ParserError
     redirect_to @incident, alert: "Claude returned an unexpected response — please try again."

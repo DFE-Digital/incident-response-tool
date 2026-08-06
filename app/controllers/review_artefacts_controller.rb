@@ -26,6 +26,7 @@ class ReviewArtefactsController < ApplicationController
       @incident.update!(status: "resolved")
     end
 
+    TeamsNotifier.review_generated(@incident, @review)
     redirect_to @incident
   rescue ActiveRecord::RecordInvalid
     render :new, status: :unprocessable_entity
