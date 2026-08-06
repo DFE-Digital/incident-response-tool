@@ -175,7 +175,7 @@
           <% end %>
 
           <ul class="govuk-pagination__list">
-            <% pagy_series(@pagy).each do |item| %>
+            <% @pagy.series.each do |item| %>
               <% if item == :gap %>
                 <li class="govuk-pagination__item govuk-pagination__item--ellipses">&ctdot;</li>
               <% elsif item.is_a?(String) %>
