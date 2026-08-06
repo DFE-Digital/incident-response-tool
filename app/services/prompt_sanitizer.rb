@@ -6,7 +6,7 @@ module PromptSanitizer
     "[REDACTED_ANTHROPIC_KEY]" => /sk-ant-[A-Za-z0-9_\-]{20,}/,
     "[REDACTED_OPENAI_KEY]"    => /\bsk-[A-Za-z0-9]{20,}\b/,
     "[REDACTED_AWS_KEY]"       => /\bAKIA[0-9A-Z]{16}\b/,
-    "[REDACTED_BEARER]"        => /Bearer\s+[A-Za-z0-9\-_=]{20,}\.[A-Za-z0-9\-_=]{20,}\.?[A-Za-z0-9\-_.+/=]*/,
+    "[REDACTED_BEARER]"        => /Bearer\s+\S{20,}/,
     "[REDACTED_EMAIL]"         => /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/
   }.freeze
 
