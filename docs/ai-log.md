@@ -13,6 +13,111 @@ at the repo root, `plan.md` at the repo root.
 
 ---
 
+## 2026-08-06 — Session 6 (Opus 4.7)
+
+Wrap-up day. Step 7 shipped, one stretch goal (S3) shipped, sprint
+declared done.
+
+### Step 7 shipped — guardrails, cost/cache panel, eval harness
+
+Three deliverables from `plan.md` Step 7, on `david/step-seven`.
+Merged as PR #31.
+
+**Guardrails:**
+- `Incident` validations tightened — title ≤200 chars, description
+  ≤10 000 chars. GDS error summary renders on the form if either
+  exceeds.
+- `app/services/prompt_sanitizer.rb` redacts Anthropic / OpenAI /
+  AWS keys, Bearer tokens and email addresses before any incident
+  text reaches Claude. Applied in all three services (process,
+  runbook, review). Intake form gained a "we redact secrets" hint.
+- Gotcha: the Bearer regex originally contained `/` inside a `[]`
+  character class, which broke Ruby's regex-literal lexer. Fixed
+  with a simpler `/Bearer\s+\S{20,}/`.
+
+**Cost + cache-hit panel:**
+- `AddClaudeUsageToArtefacts` migration adds `input_tokens`,
+  `cache_creation_input_tokens`, `cache_read_input_tokens`,
+  `output_tokens` to all three artefact tables.
+- Each Claude service reads Anthropic's `usage` block and persists
+  it. `app/services/anthropic_pricing.rb` gives a hash + one-line
+  summary; the show page renders it under every Download button as
+  `Claude usage: 10 996 tokens · $0.0621 · 100% cache hit`.
+- Cache-hit rate only shows for the runbook artefact (the only
+  service that uses prompt caching). Verified live: second call to
+  the same corpus hits 100% cache-read.
+
+**Eval harness:**
+- `spec/evals/runbook_scenarios.yml` — 10 curated scenarios in
+  three buckets: 5 retrieval (each with `expected_runbook_id`),
+  3 draft (novel operational incidents including CDT and HEYP,
+  no corpus match), 2 refuse (non-operational reports).
+- `lib/tasks/eval.rake` opens a transaction, creates a real
+  `Incident` for each scenario, calls the real
+  `ClaudeRunbookService`, compares `match_type` + `runbook_id`,
+  rolls back so no test data persists. Also scans for hallucinated
+  (non-corpus) runbook_ids.
+- Full run verified: 10/10 pass, retrieval 100%, draft 100%,
+  refuse 100%, 0 hallucinations, ~$0.96 for a full run.
+
+### S3 stretch — ISO 42001 alignment doc
+
+`docs/compliance.md` — early-stage self-assessment mapping ~20
+Annex A controls (A.2 through A.10) with evidence + gap columns for
+each. Written honestly: 9 known gaps consolidated at the bottom
+rather than papered over.
+
+Later that day: added section 3 introducing the architecture as
+**Cache-Augmented Generation (CAG)**, not RAG — worth calling out
+because most compliance readers will assume "corpus with
+citations" = RAG. CAG-vs-RAG comparison table, with the
+compliance-relevant implications (fewer suppliers, simpler data
+provenance, fewer failure modes, direct scale ceiling).
+
+Deck-friendly pull quotes:
+- "Not RAG — Cache-Augmented Generation. No vector DB, no embedding
+  model, no chunker."
+- "Every retrieval is a full-context comparison. Nothing gets missed
+  because a chunk boundary fell in the wrong place."
+- "Attack surface is one third party: Anthropic. RAG would add two
+  more — the embedding vendor and the vector DB."
+
+### Teams integration — accepted as blocked, doc updated
+
+`docs/teams-integration-setup.md` got a troubleshooting subsection
+for the "clicking Workflows does nothing" case (DfE Power Automate
+is locked down at tenant level, silent no-op) and an Option C
+fallback documenting the classic Office 365 Incoming Webhook —
+deprecated but still works in most tenants through end of 2026.
+Same payload shape as Workflows so no app changes needed.
+
+**Team decision:** stop chasing the Teams webhook for now. Demo the
+Adaptive Card payloads via webhook.site instead. A dedicated M365
+Developer Program tenant (free, 25 users, full admin) is the
+follow-up path if a live Teams demo is wanted later.
+
+### Sprint status (end of day)
+
+- **Steps 1 through 7 shipped.** All merged to master.
+- **One stretch goal (S3) shipped.** Compliance doc.
+- **Steps not shipped:** none (Step 5 Teams is code-complete;
+  runtime is blocked by tenant policy, not by the app).
+- **Stretch goals not attempted:** S1 (MCP), S2 (Slack),
+  S4 (streaming). Any of these would slot in on top of the current
+  main line without touching existing artefacts.
+
+### Open questions / next up
+
+- M365 Developer Program tenant for a live-in-Teams demo, if time.
+- Grow the eval corpus (`spec/evals/`) beyond 10 scenarios and add
+  an adversarial / prompt-injection bucket.
+- Aggregate cost dashboard (per-service, per-day totals) — the
+  per-artefact breakdown is in the schema; needs a page.
+- Threaded Teams replies via Graph API (currently each artefact is
+  a fresh message with the incident ID in the title).
+
+---
+
 ## 2026-08-06 — Session 5 (Opus 4.7)
 
 Cross-cutting fixes + Step 6 (dashboard). Retrospective — some of this
