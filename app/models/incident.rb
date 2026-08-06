@@ -12,8 +12,8 @@ class Incident < ApplicationRecord
 
   STATUSES = %w[open resolved].freeze
 
-  validates :title, presence: true
-  validates :description, presence: true
+  validates :title, presence: true, length: { maximum: 200 }
+  validates :description, presence: true, length: { maximum: 10_000 }
   validates :service, presence: true, inclusion: { in: SERVICES }
   validates :status, inclusion: { in: STATUSES }
 

@@ -36,16 +36,15 @@ class ClaudeProcessService
   end
 
   def call
+    user_content = PromptSanitizer.sanitize(
+      "Service: #{@incident.service}\nTitle: #{@incident.title}\n\n#{@incident.description}"
+    )
+
     body = {
       model: MODEL,
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: "Service: #{@incident.service}\nTitle: #{@incident.title}\n\n#{@incident.description}"
-        }
-      ]
+      messages: [{ role: "user", content: user_content }]
     }
 
     http = Net::HTTP.new(API_URL.host, API_URL.port)
@@ -61,8 +60,9 @@ class ClaudeProcessService
 
     raise "Claude API error #{response.code}: #{response.body}" unless response.is_a?(Net::HTTPSuccess)
 
-    data = JSON.parse(response.body)
-    json = JSON.parse(data.dig("content", 0, "text"))
+    data  = JSON.parse(response.body)
+    json  = JSON.parse(data.dig("content", 0, "text"))
+    usage = data["usage"] || {}
 
     ProcessArtefact.create!(
       incident: @incident,
@@ -70,7 +70,11 @@ class ClaudeProcessService
       severity_reasoning: json.fetch("severity_reasoning"),
       immediate_actions: json.fetch("immediate_actions"),
       communication_actions: json.fetch("communication_actions"),
-      escalation_path: json.fetch("escalation_path")
+      escalation_path: json.fetch("escalation_path"),
+      input_tokens:                 usage["input_tokens"],
+      cache_creation_input_tokens:  usage["cache_creation_input_tokens"],
+      cache_read_input_tokens:      usage["cache_read_input_tokens"],
+      output_tokens:                usage["output_tokens"]
     )
   end
 end

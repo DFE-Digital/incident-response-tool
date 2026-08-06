@@ -68,12 +68,17 @@ class ClaudeReviewService
     response = http.request(request)
     raise "Claude API error #{response.code}: #{response.body}" unless response.is_a?(Net::HTTPSuccess)
 
-    data = JSON.parse(response.body)
-    json = JSON.parse(data.dig("content", 0, "text"))
+    data  = JSON.parse(response.body)
+    json  = JSON.parse(data.dig("content", 0, "text"))
+    usage = data["usage"] || {}
 
     @review.update!(
       user_impact: json.fetch("user_impact"),
-      timeline:    json.fetch("timeline")
+      timeline:    json.fetch("timeline"),
+      input_tokens:                 usage["input_tokens"],
+      cache_creation_input_tokens:  usage["cache_creation_input_tokens"],
+      cache_read_input_tokens:      usage["cache_read_input_tokens"],
+      output_tokens:                usage["output_tokens"]
     )
   end
 
@@ -138,6 +143,6 @@ class ClaudeReviewService
       parts << ""
     end
 
-    parts.join("\n")
+    PromptSanitizer.sanitize(parts.join("\n"))
   end
 end

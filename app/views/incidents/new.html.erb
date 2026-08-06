@@ -4,6 +4,12 @@
   <div class="govuk-grid-column-two-thirds">
     <h1 class="govuk-heading-l">Report an incident</h1>
 
+    <p class="govuk-body-s govuk-hint">
+      API keys and email addresses are automatically redacted from the
+      description before it reaches Claude. Descriptions are limited to
+      10,000 characters.
+    </p>
+
     <%= form_with model: @incident, local: true, builder: GOVUKDesignSystemFormBuilder::FormBuilder do |f| %>
       <%= f.govuk_error_summary %>
 
