@@ -27,7 +27,31 @@
             hint: { text: "Describe the symptoms, when it started, and who is affected. Paste log output, error messages or alert text." },
             rows: 8 %>
 
-      <%= f.govuk_submit "Submit incident" %>
+      <%= f.govuk_submit "Submit incident", data: { disable_with: "Submitting…" } %>
     <% end %>
+
+    <script>
+      // Prevent double-submit: as soon as the form starts submitting, disable
+      // the submit button and swap its label to the data-disable-with text.
+      // Uses setTimeout(0) so the button disables *after* the browser has
+      // already accepted the submission (a synchronously-disabled button
+      // aborts the submit in some browsers).
+      (function () {
+        var form = document.querySelector("form");
+        if (!form) return;
+        form.addEventListener("submit", function () {
+          setTimeout(function () {
+            var btn = form.querySelector('[type="submit"]');
+            if (!btn || btn.disabled) return;
+            btn.disabled = true;
+            var label = btn.getAttribute("data-disable-with");
+            if (label) {
+              if (btn.tagName === "BUTTON") { btn.textContent = label; }
+              else { btn.value = label; }
+            }
+          }, 0);
+        });
+      })();
+    </script>
   </div>
 </div>
