@@ -1,7 +1,7 @@
 class RunbookArtefact < ApplicationRecord
   belongs_to :incident
 
-  serialize :steps, JSON
+  serialize :steps, coder: JSON
 
   MATCH_TYPES = %w[retrieved drafted refused].freeze
 

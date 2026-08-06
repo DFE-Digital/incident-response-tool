@@ -4,7 +4,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby File.read(".ruby-version").chomp
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
-gem "rails", "~> 6.1.4"
+gem "rails", "~> 7.1.4"
 
 # Use postgresql as the database for Active Record
 gem "pg", ">= 0.18", "< 2.0"
@@ -28,7 +28,7 @@ gem "foreman"
 gem "canonical-rails"
 
 # DfE gems for generating GOV.UK Design System markup
-gem "govuk-components"
+gem "govuk-components", "~> 6.2"
 gem "govuk_design_system_formbuilder"
 
 # Convert HTML into valid .docx documents (uses XSLT under the hood)
