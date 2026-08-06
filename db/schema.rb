@@ -10,8 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_08_06_110000) do
-
+ActiveRecord::Schema[7.1].define(version: 2026_08_06_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -20,8 +19,8 @@ ActiveRecord::Schema.define(version: 2026_08_06_110000) do
     t.text "description", null: false
     t.string "service", null: false
     t.string "status", default: "open", null: false
-    t.datetime "created_at", precision: 6, null: false
-    t.datetime "updated_at", precision: 6, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.string "teams_thread_id"
   end
 
@@ -32,8 +31,8 @@ ActiveRecord::Schema.define(version: 2026_08_06_110000) do
     t.text "immediate_actions", null: false
     t.text "communication_actions", null: false
     t.text "escalation_path", null: false
-    t.datetime "created_at", precision: 6, null: false
-    t.datetime "updated_at", precision: 6, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.integer "input_tokens"
     t.integer "cache_creation_input_tokens"
     t.integer "cache_read_input_tokens"
@@ -43,7 +42,7 @@ ActiveRecord::Schema.define(version: 2026_08_06_110000) do
 
   create_table "review_artefacts", force: :cascade do |t|
     t.bigint "incident_id", null: false
-    t.datetime "end_datetime", null: false
+    t.datetime "end_datetime", precision: nil, null: false
     t.string "technical_lead"
     t.string "comms_lead"
     t.string "support_lead"
@@ -60,8 +59,8 @@ ActiveRecord::Schema.define(version: 2026_08_06_110000) do
     t.text "improve_response", default: "[]", null: false
     t.text "improve_process_comms", default: "[]", null: false
     t.text "runbook_diff"
-    t.datetime "created_at", precision: 6, null: false
-    t.datetime "updated_at", precision: 6, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.integer "input_tokens"
     t.integer "cache_creation_input_tokens"
     t.integer "cache_read_input_tokens"
@@ -78,8 +77,8 @@ ActiveRecord::Schema.define(version: 2026_08_06_110000) do
     t.text "steps", default: "[]", null: false
     t.string "owner_to_escalate_to", null: false
     t.text "refusal_reason"
-    t.datetime "created_at", precision: 6, null: false
-    t.datetime "updated_at", precision: 6, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.integer "input_tokens"
     t.integer "cache_creation_input_tokens"
     t.integer "cache_read_input_tokens"
