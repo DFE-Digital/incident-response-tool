@@ -58,3 +58,9 @@ RUN apk add --update --no-cache libpq tzdata && \
 # Copy files generated in the builder image
 COPY --from=builder /app /app
 COPY --from=builder /usr/local/bundle/ /usr/local/bundle/
+
+# Second copy of the compiled packs at a path outside /app.
+# In dev the source is bind-mounted over /app, which shadows the baked
+# public/packs — copying the packs here gives docker-compose.dev.yml a
+# source it can copy from into the mounted directory on startup.
+COPY --from=builder /app/public/packs /build_packs

@@ -15,7 +15,7 @@ services:
     image: incident-response-tool:local
     volumes:
       - .:/app
-    command: ash -c "sleep 5 && apk add --no-cache build-base && bundle config unset without && bundle install && bundle exec rails db:create db:migrate && bundle exec rails server -b 0.0.0.0"
+    command: ash -c "sleep 5 && apk add --no-cache build-base && mkdir -p /app/public/packs && cp -rf /build_packs/. /app/public/packs/ && bundle config unset without && bundle install && bundle exec rails db:create db:migrate && bundle exec rails server -b 0.0.0.0"
     ports:
       - 3000:3000
     depends_on:
