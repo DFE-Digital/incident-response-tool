@@ -11,11 +11,11 @@
     "turbolinks": "^5.2.0"
   },
   "devDependencies": {
-    "sass": "1.57.1",
+    "sass": "1.104.0",
     "webpack-dev-server": "^3.11.2"
   },
   "resolutions": {
-    "sass": "1.57.1"
+    "sass": "1.104.0"
   },
   "license": "MIT"
 }
